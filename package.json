@@ -1,0 +1,30 @@
+{
+  "name": "telegram-factcheck-bot",
+  "version": "1.0.0",
+  "description": "A Telegram bot that summarizes conversations using OpenAI and stores messages in AWS S3.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "summarization",
+    "openai",
+    "aws-s3",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.200.0",
+    "axios": "^1.4.0",
+    "dotenv": "^16.0.3",
+    "moment": "^2.29.4",
+    "node-telegram-bot-api": "^0.61.0",
+    "openai": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
