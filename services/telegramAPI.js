@@ -1,35 +1,53 @@
-const axios = require('axios');
-const { Logger } = require('./logger');
-const { CONFIG } = require('./config');
+import axios from 'axios';
+import { Logger } from '../utils/logger.js';
+import { CONFIG } from '../config.js';
 
-const TelegramAPI = {
-    deleteMessage: async (chatId, messageId) => {
-        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/deleteMessage`;
-        try {
-            await axios.post(url, {
-                chat_id: chatId,
-                message_id: messageId,
-            });
-        } catch (error) {
-            Logger.log(`Failed to delete message: ${error.message}`, 'error');
-            throw error;
-        }
-    },
-    sendMessage: async (chatId, text) => {
-        const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
-        try {
-            const response = await axios.post(url, {
-                chat_id: chatId,
-                text: text,
-                parse_mode: 'Markdown',
-            });
-            Logger.log(`Message sent to chat ID ${chatId}`);
-            return response.data.result; // Return the message data
-        } catch (error) {
-            Logger.log(`Failed to send message: ${error.message}`, 'error');
-            throw error;
-        }
-    },
+/**
+ * TelegramAPI service for interacting with the Telegram Bot API
+ */
+export const TelegramAPI = {
+  /**
+     * Delete a message from a chat
+     * 
+     * @param {string|number} chatId - The chat ID 
+     * @param {string|number} messageId - The message ID to delete
+     * @returns {Promise<void>} - Promise that resolves when the message is deleted
+     */
+  deleteMessage: async (chatId, messageId) => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/deleteMessage`;
+    try {
+      await axios.post(url, {
+        chat_id: chatId,
+        message_id: messageId,
+      });
+    } catch (error) {
+      Logger.log(`Failed to delete message: ${error.message}`, 'error');
+      throw error;
+    }
+  },
+    
+  /**
+     * Send a message to a chat
+     * 
+     * @param {string|number} chatId - The chat ID
+     * @param {string} text - The message text
+     * @param {object} options - Additional options (reply_to_message_id, etc)
+     * @returns {Promise<object>} - Promise that resolves with the sent message data
+     */
+  sendMessage: async (chatId, text, options = {}) => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`;
+    try {
+      const response = await axios.post(url, {
+        chat_id: chatId,
+        text: text,
+        parse_mode: 'Markdown',
+        ...options
+      });
+      Logger.log(`Message sent to chat ID ${chatId}`);
+      return response.data.result; // Return the message data
+    } catch (error) {
+      Logger.log(`Failed to send message: ${error.message}`, 'error');
+      throw error;
+    }
+  },
 };
-
-module.exports = { TelegramAPI };
