@@ -6,7 +6,7 @@ const CONFIG = {
     S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
     AWS_REGION: process.env.AWS_REGION,
     MAX_TOKENS: 350,
-    GPT_MODEL: 'gpt-4o',
+    GPT_MODEL: 'gpt-4.1-20250-04-14',
     MESSAGE_LIMIT: 1000,
     DEFAULT_SENSITIVITY: 75,
 };

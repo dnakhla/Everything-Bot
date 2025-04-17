@@ -1,5 +1,5 @@
 const { Logger } = require('./logger');
-const { CONFIG } = require('./config');
+const { CONFIG } = require('../config');
 const { S3Manager } = require('./S3Manager');
 const moment = require('moment');
 const {
@@ -53,6 +53,7 @@ function createResponse(statusCode, body) {
 // Main function to handle incoming messages
 async function handleMessage(chatId, text, message) {
     if (text.startsWith('/clearmessages')) {
+        else if (text.toLowerCase().startsWith('robot,')) {
         await handleClearCommand(chatId, message.message_id);
     } else if (text.startsWith('/addcontext')) {
         await handleAddContextCommand(chatId, message.message_id);
