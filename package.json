@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "deploy": "bash deploy.sh --deploy --function-name FactCheckerBot-LambdaFunction --region us-east-1",
+    "set-env": "bash deploy.sh --set-env --function-name FactCheckerBot-LambdaFunction --region us-east-1 --telegram-token \"$TELEGRAM_BOT_TOKEN\" --openai-key \"$OPENAI_API_KEY\" --s3-bucket \"$S3_BUCKET_NAME\" --serper-key \"$SERPER_API_KEY\" --brave-key \"$BRAVE_API_KEY\"",
     "logs": "aws logs tail /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",

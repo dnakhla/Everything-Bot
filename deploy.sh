@@ -13,23 +13,28 @@ DEPLOY_DIR="lambda-deployment"
 
 # --- Variables ---
 LAMBDA_FUNCTION_NAME=""
-AWS_REGION="$DEFAULT_REGION"
-TELEGRAM_TOKEN=""
-OPENAI_KEY=""
-S3_BUCKET=""
+# Use AWS_REGION env var if set, otherwise default
+AWS_REGION="${AWS_REGION:-$DEFAULT_REGION}"
 DO_DEPLOY=false
 DO_SET_ENV=false
+# New flag: create a new Lambda function
+DO_CREATE=false
 
 # --- Helper Functions ---
 usage() {
-    echo "Usage: $0 [--function-name <n>] [--region <region>] [--telegram-token <token>] [--openai-key <key>] [--s3-bucket <bucket>] [--deploy] [--set-env]"
+    echo "Usage: $0 [--function-name <n>] [--region <region>] [--telegram-token <token>] [--openai-key <key>] [--s3-bucket <bucket>] [--serper-key <key>] [--brave-key <key>] [--deploy] [--set-env] [--create] [--role <role>] [--account-id <id>]"
     echo "  --function-name  : AWS Lambda function name (required for --deploy and --set-env)"
     echo "  --region         : AWS Region (optional, default: $DEFAULT_REGION)"
     echo "  --telegram-token : Telegram Bot Token (required for --set-env)"
     echo "  --openai-key     : OpenAI API Key (required for --set-env)"
     echo "  --s3-bucket      : S3 Bucket Name (required for --set-env)"
+    echo "  --serper-key     : Google Serper API Key (for web search functionality)"
+    echo "  --brave-key      : Brave Search API Key (for web search functionality)"
     echo "  --deploy         : Flag to deploy the zip file to AWS Lambda"
     echo "  --set-env        : Flag to set environment variables on AWS Lambda"
+    echo "  --create         : Flag to create a new AWS Lambda function"
+    echo "  --role           : IAM role name for Lambda (required for --create)"
+    echo "  --account-id     : AWS Account ID (required for --create)"
     exit 1
 }
 
@@ -56,6 +61,26 @@ while [[ $# -gt 0 ]]; do
             S3_BUCKET="$2"
             shift 2
             ;;
+        --serper-key)
+            SERPER_API_KEY="$2"
+            shift 2
+            ;;
+        --brave-key)
+            BRAVE_API_KEY="$2"
+            shift 2
+            ;;
+        --create)
+            DO_CREATE=true
+            shift
+            ;;
+        --role)
+            LAMBDA_ROLE="$2"
+            shift 2
+            ;;
+        --account-id)
+            AWS_ACCOUNT_ID="$2"
+            shift 2
+            ;;
         --deploy)
             DO_DEPLOY=true
             shift
@@ -77,9 +102,54 @@ done
 # --- Start Script ---
 echo -e "${YELLOW}Starting deployment process...${NC}"
 
+# --- Fallback to environment variables if flags not provided ---
+if [ -z "$TELEGRAM_TOKEN" ] && [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+    TELEGRAM_TOKEN="$TELEGRAM_BOT_TOKEN"
+fi
+if [ -z "$OPENAI_KEY" ] && [ -n "$OPENAI_API_KEY" ]; then
+    OPENAI_KEY="$OPENAI_API_KEY"
+fi
+if [ -z "$S3_BUCKET" ] && [ -n "$S3_BUCKET_NAME" ]; then
+    S3_BUCKET="$S3_BUCKET_NAME"
+fi
+# Note: SERPER_API_KEY and BRAVE_API_KEY are taken from environment if not overridden by flags
+
 # 1. Create deployment directory and copy files
 echo -e "Creating deployment directory: ${GREEN}$DEPLOY_DIR${NC}"
 rm -rf $DEPLOY_DIR
+
+# 5a. Create new AWS Lambda function (Conditional)
+if [ "$DO_CREATE" = true ]; then
+    echo -e "${YELLOW}--- AWS Lambda Creation ---${NC}"
+    if [ -z "$LAMBDA_FUNCTION_NAME" ]; then
+        echo -e "${RED}Error: Lambda function name (--function-name) is required for creation.${NC}"
+        usage
+    fi
+    if ! command -v aws &> /dev/null; then
+        echo -e "${RED}Error: AWS CLI not found. Cannot create function.${NC}"
+        exit 1
+    fi
+    if [ -z "$AWS_ACCOUNT_ID" ] || [ -z "$LAMBDA_ROLE" ]; then
+        echo -e "${RED}Error: --account-id and --role are required for --create.${NC}"
+        usage
+    fi
+    ROLE_ARN="arn:aws:iam::$AWS_ACCOUNT_ID:role/$LAMBDA_ROLE"
+    echo -e "Creating Lambda function: ${GREEN}$LAMBDA_FUNCTION_NAME${NC} with role ${GREEN}$ROLE_ARN${NC} in region ${GREEN}$AWS_REGION${NC}..."
+    aws lambda create-function \
+        --function-name "$LAMBDA_FUNCTION_NAME" \
+        --runtime nodejs16.x \
+        --role "$ROLE_ARN" \
+        --handler index.handler \
+        --zip-file "fileb://$ZIP_FILE_NAME" \
+        --environment "Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPER_API_KEY=${SERPER_API_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-}}" \
+        --region "$AWS_REGION"
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}Lambda function created successfully!${NC}"
+    else
+        echo -e "${RED}Failed to create Lambda function.${NC}"
+        exit 1
+    fi
+fi
 mkdir -p $DEPLOY_DIR
 mkdir -p $DEPLOY_DIR/services
 mkdir -p $DEPLOY_DIR/src
@@ -163,7 +233,7 @@ if [ "$DO_SET_ENV" = true ]; then
     fi
 
     echo -e "Setting environment variables for Lambda function: ${GREEN}$LAMBDA_FUNCTION_NAME${NC}..."
-    ENV_VARIABLES="Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,AWS_REGION=$AWS_REGION}"
+    ENV_VARIABLES="Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPER_API_KEY=${SERPER_API_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-}}"
 
     aws lambda update-function-configuration \
         --function-name "$LAMBDA_FUNCTION_NAME" \

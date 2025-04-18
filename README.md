@@ -7,9 +7,9 @@ A Telegram bot that helps group chats stay factual by providing real-time fact-c
 - Add it to your group chats for real-time fact-checking
 - Start a direct conversation to test its capabilities
 
-![Bot Live on Telegram](livedemo.png)
+![Bot Live on Telegram](assets/livedemo.png)
 
-![Demo of Telegram Fact-Checker Bot](demo.png)
+![Demo of Telegram Fact-Checker Bot](assets/demo.png)
 
 ## Features
 
@@ -42,18 +42,29 @@ A Telegram bot that helps group chats stay factual by providing real-time fact-c
    - Timeout: 30 seconds
 
 4. Configure environment variables in Lambda:
-   ```env
-   TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-   OPENAI_API_KEY=your_openai_api_key_here
-   AWS_REGION=your_aws_region_here
-   S3_BUCKET_NAME=your_s3_bucket_name_here
-   ```
+   - Using npm script:
+     ```bash
+     npm run set-env -- --function-name YOUR_FUNCTION_NAME --region your-region
+     ```
+   - Or manually in AWS Console:
+     ```env
+     TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+     OPENAI_API_KEY=your_openai_api_key_here
+     AWS_REGION=your_aws_region_here
+     S3_BUCKET_NAME=your_s3_bucket_name_here
+     SERPER_API_KEY=your_serper_api_key_here
+     BRAVE_API_KEY=your_brave_api_key_here
+     ```
 
 5. Deploy the code:
-   ```bash
-   zip -r function.zip .
-   aws lambda update-function-code --function-name YOUR_FUNCTION_NAME --zip-file fileb://function.zip
-   ```
+   - Using npm script:
+     ```bash
+     npm run deploy -- --function-name YOUR_FUNCTION_NAME --region your-region
+     ```
+   - Or manually:
+     ```bash
+     bash deploy.sh --deploy --function-name YOUR_FUNCTION_NAME --region your-region
+     ```
 
 6. Set up Telegram Webhook:
    - Create an API Gateway trigger for your Lambda
@@ -75,6 +86,18 @@ Note: You can also use the existing deployed bot by adding @LetMeCheckThatBot to
    npm start
    ```
 
+## npm Scripts
+
+- `npm start` - Start the local development server
+- `npm run deploy` - Package and deploy to AWS Lambda
+- `npm run set-env` - Set environment variables on AWS Lambda
+- `npm run logs` - Tail logs of the Lambda function
+- `npm test` - Run Jest tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run test:coverage` - Run tests with coverage
+- `npm run lint` - Run ESLint
+- `npm run test:syntax` - Check JavaScript syntax
+
 ## Available Commands
 
 - `/context` - Analyze recent messages and provide factual context
@@ -84,7 +107,7 @@ Note: You can also use the existing deployed bot by adding @LetMeCheckThatBot to
 
 ## Features in Detail
 
-![Demo of Telegram Fact-Checker Bot](demo2.png)
+![Demo of Telegram Fact-Checker Bot](assets/demo2.png)
 
 ### Context Analysis
 The bot uses OpenAI's GPT model to analyze conversations and provides context from reliable sources like:
@@ -112,4 +135,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License. See package.json for details.

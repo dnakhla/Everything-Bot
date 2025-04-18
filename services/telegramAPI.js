@@ -50,4 +50,32 @@ export const TelegramAPI = {
       throw error;
     }
   },
+  
+  /**
+     * Edit the text of an existing message
+     * 
+     * @param {string|number} chatId - The chat ID
+     * @param {string|number} messageId - The message ID to edit
+     * @param {string} text - The new text for the message
+     * @param {object} options - Additional options
+     * @returns {Promise<object>} - Promise that resolves with the edited message data
+     */
+  editMessageText: async (chatId, messageId, text, options = {}) => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/editMessageText`;
+    try {
+      const response = await axios.post(url, {
+        chat_id: chatId,
+        message_id: messageId,
+        text: text,
+        parse_mode: 'Markdown',
+        ...options
+      });
+      Logger.log(`Message ${messageId} edited in chat ID ${chatId}`);
+      return response.data.result; // Return the edited message data
+    } catch (error) {
+      Logger.log(`Failed to edit message: ${error.message}`, 'error');
+      // Fail silently as requested
+      return null;
+    }
+  },
 };

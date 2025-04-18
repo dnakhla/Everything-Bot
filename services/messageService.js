@@ -330,3 +330,74 @@ export async function performBraveSearch(query) {
     throw error; // Let the caller handle this error
   }
 }
+
+/**
+ * Fetch content from a URL
+ * 
+ * @param {string} url - The URL to fetch content from
+ * @returns {Promise<string>} - Promise that resolves with the content summary
+ */
+export async function fetchUrlContent(url) {
+  // Check cache first using URL as key
+  const cacheKey = `url_${url.toLowerCase().trim()}`;
+  if (searchCache[cacheKey]) {
+    Logger.log(`Using cached URL content for: ${url}`);
+    return searchCache[cacheKey];
+  }
+  
+  try {
+    Logger.log(`Fetching content from URL: ${url}`);
+    
+    const config = {
+      method: 'get',
+      url: url,
+      timeout: 15000, // 15 seconds
+      maxContentLength: 1024 * 1024, // Limit to 1MB
+      headers: {
+        'User-Agent': 'FactChecker Bot/1.0'
+      }
+    };
+    
+    const response = await axios.request(config);
+    
+    // Only process HTML content
+    const contentType = response.headers['content-type'] || '';
+    if (!contentType.includes('text/html')) {
+      return `Content from ${url} is not HTML (${contentType}). Cannot extract meaningful content.`;
+    }
+    
+    // Extract title and main content (simplified approach)
+    const html = response.data;
+    let title = '';
+    const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      title = titleMatch[1].trim();
+    }
+    
+    // Create a simple content summary
+    let contentSummary = `📄 *Content from ${url}*\n`;
+    contentSummary += `📌 **Title:** ${title || 'No title'}\n\n`;
+    
+    // Extract text content (simplified approach - in reality you might want a proper HTML parser)
+    let textContent = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove scripts
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')     // Remove styles
+      .replace(/<[^>]+>/g, ' ')                                              // Remove HTML tags
+      .replace(/\s+/g, ' ')                                                 // Normalize whitespace
+      .trim();
+    
+    // Limit content length for reasonable response
+    if (textContent.length > 2000) {
+      textContent = textContent.substring(0, 2000) + '... (content truncated)';
+    }
+    
+    contentSummary += textContent;
+    
+    // Cache the result
+    searchCache[cacheKey] = contentSummary;
+    return contentSummary;
+  } catch (error) {
+    Logger.log(`Failed to fetch URL content: ${error.message}`, 'error');
+    return `Failed to retrieve content from ${url}: ${error.message}`;
+  }
+}
