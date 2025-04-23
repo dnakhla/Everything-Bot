@@ -13,12 +13,12 @@ A Telegram bot that helps group chats stay factual by providing real-time fact-c
 
 ## Features
 
-- 🔍 **Real-time Fact Checking**: Analyzes conversations and provides context from reliable sources
-- 🤖 **AI-Powered Responses**: Direct Q&A capabilities using GPT model
-- ⚖️ **Debate Analysis**: Evaluates discussions and provides objective analysis
-- 📊 **Message History**: Stores chat history in AWS S3 for context awareness
-- 🧹 **Chat Management**: Commands to clear history and manage bot messages
-- ☁️ **Serverless Architecture**: Deployed as AWS Lambda function for scalability and cost-effectiveness
+- 🔍 **Fact Checking & Context**: Ask the bot questions about the conversation or specific topics for fact-checking and context using reliable sources.
+- 🤖 **AI-Powered Responses**: Direct Q&A capabilities using the `robot` command and GPT model.
+- ⚖️ **Discussion Analysis**: Ask the bot to analyze or summarize recent discussions or debates.
+- 📊 **Message History**: Stores chat history in AWS S3 for context awareness, enabling analysis of past conversations.
+- 🧹 **Chat Management**: Commands to clear history and manage bot messages.
+- ☁️ **Serverless Architecture**: Deployed as AWS Lambda function for scalability and cost-effectiveness.
 
 ## Prerequisites
 
@@ -100,28 +100,22 @@ Note: You can also use the existing deployed bot by adding @LetMeCheckThatBot to
 
 ## Available Commands
 
-- `/context` - Analyze recent messages and provide factual context
-- `/settle` - Analyze a debate and provide an objective assessment
-- `/clear` - Clear bot message history
-- `robot, [question]` - Ask the bot a direct question
+- `/clearmessages` - Clears all stored message history from S3 for the chat and attempts to delete messages previously sent by the bot in the chat interface.
+- `robot, [question]` or `robot [question]` - Ask the bot a direct question
 
 ## Features in Detail
 
 ![Demo of Telegram Fact-Checker Bot](assets/demo2.png)
 
 ### Context Analysis
-The bot uses OpenAI's GPT model to analyze conversations and provides context from reliable sources like:
+The bot uses OpenAI's GPT model to analyze conversations and provides context from reliable sources. To gather information, the bot utilizes web searches via Google Search and Brave Search. Some example sources include:
 - Reuters and Associated Press
 - BBC News and Wall Street Journal
 - Academic journals and research papers
 - Government databases and statistics
 
-### Debate Analysis
-When analyzing debates, the bot considers:
-- Quality of arguments (logic, reasoning)
-- Use of evidence and facts
-- Effectiveness of rebuttals
-- Clarity and persuasiveness
+### Discussion Analysis
+Leveraging the stored message history, you can ask the bot (`robot` command) to analyze or summarize recent discussions or debates within the chat. The bot uses its AI capabilities to provide an objective overview based on the conversation history.
 
 ### Message Storage
 Messages are stored in AWS S3 for:
