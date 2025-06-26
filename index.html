@@ -23,116 +23,412 @@
     <meta property="twitter:image" content="https://dnakhla.github.io/TelegramFactChecker/assets/livedemo.png">
 
     <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Foundation CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/foundation-sites@6.7.4/dist/css/foundation.min.css">
+    
+    <!-- Custom CSS for overrides and specific styles -->
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1D1D1F;
+            background-color: #F5F5F7;
+        }
+        .hero {
+            background: linear-gradient(135deg, #007AFF 0%, #6A82FB 100%);
+            color: #fff;
+            padding: 6rem 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 L 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.2"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)" /></svg>');
+            opacity: 0.2;
+            z-index: 0;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        .hero h1 {
+            font-weight: 700;
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            letter-spacing: -0.05em;
+            line-height: 1.1;
+            color: #fff;
+        }
+        .hero h1 span {
+            color: #E0F7FA;
+        }
+        .hero .lead {
+            font-size: 1.5rem;
+            font-weight: 300;
+            max-width: 800px;
+            margin: 0 auto 2rem auto;
+            opacity: 0.9;
+            color: #fff;
+        }
+        .free-tag {
+            display: inline-block;
+            background-color: #34C759;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .hero-image {
+            max-width: 80%;
+            height: auto;
+            margin-top: 3rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+            transition: transform 0.5s ease;
+        }
+        .hero-image:hover {
+            transform: scale(1.01);
+        }
+
+        /* General Section Styling */
+        section {
+            padding: 4rem 0;
+            text-align: center;
+        }
+        section:nth-of-type(even) {
+            background-color: #F0F2F5;
+        }
+        h2 {
+            font-size: 2.5rem;
+            color: #1D1D1F;
+            margin-bottom: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.03em;
+        }
+
+        /* Feature Items */
+        .feature-item {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            text-align: left;
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+            border: 1px solid #E0E0E0;
+            height: 100%; /* Ensure equal height */
+        }
+        .feature-item:hover {
+            transform: translateY(-0.5rem);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        }
+        .feature-item h3 {
+            color: #007AFF;
+            font-size: 1.4rem;
+            margin-bottom: 0.75rem;
+        }
+        .feature-item p {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        /* How It Works */
+        .how-it-works .lead {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 2.5rem auto;
+            color: #666;
+        }
+        .step-item {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            text-align: left;
+            transition: transform 0.2s ease;
+            border: 1px solid #E0E0E0;
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.5rem; /* Spacing between steps */
+        }
+        .step-item:last-child {
+            margin-bottom: 0;
+        }
+        .step-item:hover {
+            transform: translateY(-0.3rem);
+        }
+        .step-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #007AFF;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+        }
+        .step-item h3 {
+            font-size: 1.3rem;
+            color: #1D1D1F;
+            margin-bottom: 0.5rem;
+        }
+        .step-item p {
+            font-size: 1rem;
+            color: #666;
+        }
+
+        /* Persona Section */
+        .persona-section {
+            background: linear-gradient(135deg, #E6EEF9, #D1E0F0);
+            padding: 4rem 0;
+        }
+        .persona-section h2 {
+            color: #1D1D1F;
+        }
+        .persona-section .lead {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 2rem auto;
+            color: #444;
+        }
+        .persona-examples .callout {
+            background-color: #fff;
+            border: 1px solid #E0E0E0;
+            border-left: 5px solid #007AFF;
+            border-radius: 0.5rem;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            font-family: 'Menlo', 'Consolas', monospace;
+            font-size: 0.95rem;
+            color: #1D1D1F;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .persona-examples .callout strong {
+            color: #007AFF;
+        }
+
+        /* Demo Images */
+        .demo-images img {
+            width: 100%; /* Foundation handles responsiveness */
+            height: auto;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+        }
+        .demo-images img:hover {
+            transform: scale(1.01);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            padding: 2.5rem 0;
+            background: #1D1D1F;
+            color: #fff;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        footer a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            transition: text-decoration 0.2s ease;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+        .margin-bottom-2 {
+            margin-bottom: 2rem;
+        }
+
+        /* Responsive Adjustments */
+        @media screen and (max-width: 767px) {
+            .hero {
+                padding: 4rem 0;
+            }
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            .hero .lead {
+                font-size: 1.2rem;
+            }
+            .hero-image {
+                max-width: 90%;
+            }
+            h2 {
+                font-size: 2rem;
+            }
+            .feature-item {
+                padding: 1.5rem;
+            }
+            .step-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            .step-number {
+                margin-right: 0;
+                margin-bottom: 1rem;
+            }
+            .persona-examples .callout {
+                font-size: 0.85rem;
+            }
+        }
+    </style>
 </head>
 <body>
     <main>
         <section class="hero">
-            <div class="container hero-content">
+            <div class="grid-container hero-content">
                 <p class="free-tag">It's Free</p>
                 <h1>Elevate Your Group Chats with <span>Intelligent AI</span></h1>
-                <p class="tagline">The Telegram Fact-Checker Bot brings real-time fact-checking, deep analysis, and dynamic conversations directly to your fingertips. Smart, seamless, and always on point.</p>
+                <p class="lead">The Telegram Fact-Checker Bot brings real-time fact-checking, deep analysis, and dynamic conversations directly to your fingertips. Smart, seamless, and always on point.</p>
                 <div class="button-group">
-                    <a href="https://t.me/LetMeCheckThatBot" class="button primary">Add to Telegram</a>
-                    <a href="https://github.com/dnakhla/TelegramFactChecker" class="button">View on GitHub</a>
+                    <a href="https://t.me/LetMeCheckThatBot" class="button primary large">Add to Telegram</a>
+                    <a href="https://github.com/dnakhla/TelegramFactChecker" class="button large">View on GitHub</a>
                 </div>
                 <img src="assets/livedemo.png" alt="Telegram Fact-Checker Bot in action, showing a conversation with intelligent responses." class="hero-image" loading="lazy">
             </div>
         </section>
 
         <section id="features" class="features">
-            <div class="container">
-                <h2>Unleash the Power of Knowledge</h2>
-                <div class="feature-grid">
-                    <div class="feature-item">
-                        <h3>🔍 Instant Fact-Checking</h3>
-                        <p>Get real-time verification of claims and access to comprehensive, balanced information from diverse sources.</p>
+            <div class="grid-container">
+                <h2 class="text-center">Unleash the Power of Knowledge</h2>
+                <div class="grid-x grid-margin-x small-up-1 medium-up-2 large-up-4">
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>🔍 Instant Fact-Checking</h3>
+                            <p>Get real-time verification of claims and access to comprehensive, balanced information from diverse sources.</p>
+                        </div>
                     </div>
-                    <div class="feature-item">
-                        <h3>🧠 AI-Powered Insights</h3>
-                        <p>Beyond facts, the bot summarizes complex topics, filters data, and analyzes trends to provide deeper understanding.</p>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>🧠 AI-Powered Insights</h3>
+                            <p>Beyond facts, the bot summarizes complex topics, filters data, and analyzes trends to provide deeper understanding.</p>
+                        </div>
                     </div>
-                    <div class="feature-item">
-                        <h3>🛠️ Specialized Tools</h3>
-                        <p>From math calculations to image searches and accommodation lookups, a suite of tools at your command.</p>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>🛠️ Specialized Tools</h3>
+                            <p>From math calculations to image searches and accommodation lookups, a suite of tools at your command.</p>
+                        </div>
                     </div>
-                    <div class="feature-item">
-                        <h3>💬 Seamless Integration</h3>
-                        <p>Designed for natural, conversational interaction, the bot integrates effortlessly into your existing Telegram group chats.</p>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>💬 Seamless Integration</h3>
+                            <p>Designed for natural, conversational interaction, the bot integrates effortlessly into your existing Telegram group chats.</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <section id="how-it-works" class="how-it-works">
-            <div class="container">
-                <h2>How It Works: The Intelligent Agent</h2>
-                <p class="tagline">Our bot isn't just a simple Q&A system. It's a sophisticated AI agent that thinks, researches, and synthesizes information just like a human expert.</p>
-                <div class="how-it-works-steps">
-                    <div class="step-item">
-                        <span class="step-number">1</span>
-                        <div>
-                            <h3>Understands Your Query</h3>
-                            <p>The AI deeply analyzes your question, understanding intent and context to formulate the best approach.</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <span class="step-number">2</span>
-                        <div>
-                            <h3>Strategically Selects Tools</h3>
-                            <p>It intelligently picks the optimal tools—like web search, news analysis, or data filtering—to gather precise information.</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <span class="step-number">3</span>
-                        <div>
-                            <h3>Gathers & Processes Information</h3>
-                            <p>The bot executes these tools, collecting and processing data, building a comprehensive understanding of the topic.</p>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <span class="step-number">4</span>
-                        <div>
-                            <h3>Delivers Refined Answers</h3>
-                            <p>Finally, it synthesizes all findings into clear, concise, and conversational responses, delivered naturally in your chat.</p>
+            <div class="grid-container">
+                <h2 class="text-center">How It Works: The Intelligent Agent</h2>
+                <p class="lead text-center">Our bot isn't just a simple Q&A system. It's a sophisticated AI agent that thinks, researches, and synthesizes information just like a human expert.</p>
+                <div class="grid-x grid-margin-x align-center">
+                    <div class="cell small-12 medium-10 large-8">
+                        <div class="how-it-works-steps">
+                            <div class="step-item">
+                                <span class="step-number">1</span>
+                                <div>
+                                    <h3>Understands Your Query</h3>
+                                    <p>The AI deeply analyzes your question, understanding intent and context to formulate the best approach.</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <span class="step-number">2</span>
+                                <div>
+                                    <h3>Strategically Selects Tools</h3>
+                                    <p>It intelligently picks the optimal tools—like web search, news analysis, or data filtering—to gather precise information.</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <span class="step-number">3</span>
+                                <div>
+                                    <h3>Gathers & Processes Information</h3>
+                                    <p>The bot executes these tools, collecting and processing data, building a comprehensive understanding of the topic.</p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <span class="step-number">4</span>
+                                <div>
+                                    <h3>Delivers Refined Answers</h3>
+                                    <p>Finally, it synthesizes all findings into clear, concise, and conversational responses, delivered naturally in your chat.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <p class="tagline">This multi-step, adaptive approach ensures highly accurate and nuanced answers, far surpassing traditional AI systems.</p>
+                <p class="lead text-center">This multi-step, adaptive approach ensures highly accurate and nuanced answers, far surpassing traditional AI systems.</p>
             </div>
         </section>
 
         <section id="personas" class="persona-section">
-            <div class="container">
-                <h2>🎭 Dynamic Personas: Talk to Your Bot, Your Way</h2>
-                <p>The Fact-Checker Bot isn't just smart; it's incredibly adaptable! Instruct it to adopt any persona, allowing for engaging and tailored interactions. Whether you seek a serious academic, a witty comedian, or a skeptical debater, the bot responds in character.</p>
-                <p>This unique feature unlocks endless possibilities, making your group chats more dynamic and fun, all while still delivering accurate information.</p>
-                <h3>How to Use Dynamic Personas:</h3>
-                <div class="persona-examples">
-                    <div class="persona-example-item"><strong>optimist-bot,</strong> what's the future of AI?</div>
-                    <div class="persona-example-item"><strong>skeptic-bot,</strong> tell me about climate change.</div>
-                    <div class="persona-example-item"><strong>bro-bot,</strong> what's up with the new iPhone?</div>
-                    <div class="persona-example-item"><strong>professor-bot,</strong> explain quantum physics simply.</div>
+            <div class="grid-container">
+                <h2 class="text-center">🎭 Dynamic Personas: Talk to Your Bot, Your Way</h2>
+                <p class="lead text-center">The Fact-Checker Bot isn't just smart; it's incredibly adaptable! Instruct it to adopt any persona, allowing for engaging and tailored interactions. Whether you seek a serious academic, a witty comedian, or a skeptical debater, the bot responds in character.</p>
+                <p class="lead text-center">This unique feature unlocks endless possibilities, making your group chats more dynamic and fun, all while still delivering accurate information.</p>
+                <h3 class="text-center margin-bottom-2">How to Use Dynamic Personas:</h3>
+                <div class="grid-x grid-margin-x align-center">
+                    <div class="cell small-12 medium-10 large-8">
+                        <div class="persona-examples">
+                            <div class="callout">
+                                <strong>optimist-bot,</strong> what's the future of AI?
+                            </div>
+                            <div class="callout">
+                                <strong>skeptic-bot,</strong> tell me about climate change.
+                            </div>
+                            <div class="callout">
+                                <strong>bro-bot,</strong> what's up with the new iPhone?
+                            </div>
+                            <div class="callout">
+                                <strong>professor-bot,</strong> explain quantum physics simply.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <section id="demos" class="demos">
-            <div class="container">
-                <h2>See It in Action</h2>
-                <div class="demo-images">
-                    <img src="assets/livedemo.png" alt="Live demonstration of the Telegram Fact-Checker Bot in a group chat, showing its real-time responses." loading="lazy">
-                    <img src="assets/demo.png" alt="Detailed demo showcasing various features of the Fact-Checker Bot, including web search results and data analysis." loading="lazy">
+            <div class="grid-container">
+                <h2 class="text-center">See It in Action</h2>
+                <div class="grid-x grid-margin-x align-center">
+                    <div class="cell small-12 medium-6 large-6">
+                        <img src="assets/livedemo.png" alt="Live demonstration of the Telegram Fact-Checker Bot in a group chat, showing its real-time responses." loading="lazy">
+                    </div>
+                    <div class="cell small-12 medium-6 large-6">
+                        <img src="assets/demo.png" alt="Detailed demo showcasing various features of the Fact-Checker Bot, including web search results and data analysis." loading="lazy">
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
     <footer>
-        <div class="container">
+        <div class="grid-container">
             <p>&copy; 2024 Telegram Fact-Checker Bot. All rights reserved. | <a href="https://github.com/dnakhla/TelegramFactChecker/blob/master/LICENSE">License</a></p>
         </div>
     </footer>
+
+    <!-- Foundation JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/foundation-sites@6.7.4/dist/js/foundation.min.js"></script>
+    <script>
+        $(document).foundation();
+    </script>
 </body>
 </html>
