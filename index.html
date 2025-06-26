@@ -29,12 +29,68 @@
     
     <!-- Custom CSS for overrides and specific styles -->
     <style>
+        /* CSS Custom Properties */
+        :root {
+            /* Color Palette */
+            --primary-blue: #007AFF;
+            --primary-blue-dark: #0056B3;
+            --secondary-blue: #6A82FB;
+            --accent-green: #34C759;
+            --light-blue: #E0F7FA;
+            --background-light: #F5F5F7;
+            --background-alt: #F0F2F5;
+            --background-persona: linear-gradient(135deg, #E6EEF9, #D1E0F0);
+            --text-primary: #1D1D1F;
+            --text-secondary: #666;
+            --text-light: #444;
+            --white: #ffffff;
+            --border-light: #E0E0E0;
+            --shadow-light: rgba(0,0,0,0.05);
+            --shadow-medium: rgba(0,0,0,0.1);
+            --shadow-heavy: rgba(0,0,0,0.25);
+            
+            /* Typography */
+            --font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: 'Menlo', 'Consolas', monospace;
+            --font-size-hero: clamp(2.5rem, 5vw, 3.5rem);
+            --font-size-h2: clamp(2rem, 4vw, 2.5rem);
+            --font-size-h3: 1.4rem;
+            --font-size-lead: clamp(1.2rem, 2.5vw, 1.5rem);
+            --font-size-body: 1rem;
+            --font-size-small: 0.95rem;
+            --line-height-tight: 1.1;
+            --line-height-normal: 1.4;
+            --line-height-relaxed: 1.6;
+            
+            /* Spacing */
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 2.5rem;
+            --spacing-2xl: 3rem;
+            --spacing-3xl: 4rem;
+            --spacing-4xl: 6rem;
+            
+            /* Border Radius */
+            --radius-sm: 0.5rem;
+            --radius-md: 0.75rem;
+            --radius-lg: 1rem;
+            --radius-xl: 1.2rem;
+            --radius-full: 9999px;
+            
+            /* Transitions */
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+            --transition-slow: 0.5s ease;
+        }
+
         /* General Styles */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #1D1D1F;
-            background-color: #F5F5F7;
+            font-family: var(--font-system);
+            line-height: var(--line-height-relaxed);
+            color: var(--text-primary);
+            background-color: var(--background-light);
             margin: 0;
             padding: 0;
             display: flex;
@@ -48,161 +104,389 @@
         .grid-container {
             max-width: 1024px;
             margin: 0 auto;
-            padding: 0 1.5rem;
+            padding: 0 var(--spacing-md);
         }
 
-        /* Hero Section */
+        /* Hero Section - Dark Horizontal Layout */
         .hero {
-            background: linear-gradient(135deg, #007AFF 0%, #6A82FB 100%);
-            color: #fff;
-            padding: 6rem 0;
-            text-align: center;
             position: relative;
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a2a2a 100%);
+            color: var(--white);
             overflow: hidden;
         }
-        .hero::before {
-            content: '';
+        
+        .hero-background {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 L 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.2"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)" /></svg>');
-            opacity: 0.2;
             z-index: 0;
         }
+        
+        .hero-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: 0.5;
+        }
+        
         .hero-content {
             position: relative;
-            z-index: 1;
+            z-index: 10;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-4xl);
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-3xl) var(--spacing-md);
         }
-        .hero h1 {
-            font-weight: 700;
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            letter-spacing: -0.05em;
-            line-height: 1.1;
-            color: #fff;
+        
+        .hero-left {
+            text-align: left;
         }
-        .hero h1 span {
-            color: #E0F7FA;
+        
+        .hero-badge {
+            margin-bottom: var(--spacing-lg);
         }
-        .hero .lead {
-            font-size: 1.5rem;
-            font-weight: 300;
-            max-width: 800px;
-            margin: 0 auto 2rem auto;
-            opacity: 0.9;
-            color: #fff;
-        }
+        
         .free-tag {
             display: inline-block;
-            background-color: #34C759;
-            color: #fff;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
             padding: 0.5rem 1rem;
-            border-radius: 9999px;
+            border-radius: var(--radius-sm);
             font-size: 0.9rem;
             font-weight: 600;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
         }
-        .hero-image {
-            max-width: 50%;
+        
+        .hero h1 {
+            font-weight: 700;
+            font-size: clamp(2.5rem, 5vw, 3.8rem);
+            line-height: 1.1;
+            margin-bottom: var(--spacing-md);
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+        
+        .persona-showcase {
+            margin-bottom: var(--spacing-xl);
+            min-height: 120px;
+        }
+        
+        .persona-text {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: #cbd5e1;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .persona-cycler {
+            position: relative;
             height: auto;
-            margin-top: 3rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
-            transition: transform 0.5s ease;
+            min-height: 80px;
+            overflow: visible;
         }
-        .hero-image:hover {
-            transform: scale(1.01);
+        
+        .message-input {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-md);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            color: #e2e8f0;
+            position: relative;
+        }
+        
+        
+        .hero h2 {
+            font-weight: 700;
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            line-height: 1.1;
+            margin-bottom: var(--spacing-lg);
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+        
+        .hero-highlight {
+            color: #3b82f6;
+            position: relative;
+        }
+        
+        .hero-description {
+            font-size: clamp(1.1rem, 2vw, 1.3rem);
+            line-height: 1.7;
+            color: #cbd5e1;
+            margin-bottom: var(--spacing-xl);
+            max-width: 500px;
+        }
+        
+        .hero-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .cta-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: var(--white);
+            padding: 1rem 2rem;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all var(--transition-normal);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .cta-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(59, 130, 246, 0.4);
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+        }
+        
+        .cta-secondary {
+            background: transparent;
+            border: 2px solid #374151;
+            color: #e5e7eb;
+            padding: 1rem 2rem;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: all var(--transition-normal);
+        }
+        
+        .cta-secondary:hover {
+            border-color: #6b7280;
+            background: rgba(55, 65, 81, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .hero-right {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xl);
+        }
+        
+        .hero-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--spacing-lg);
+            padding: var(--spacing-lg);
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(10px);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: var(--spacing-sm);
+        }
+        
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #3b82f6;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        .hero-features {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .feature-highlight {
+            color: #e2e8f0;
+            font-size: 1rem;
+            font-weight: 500;
+            padding: 0.75rem 0;
+            border-left: 3px solid #3b82f6;
+            padding-left: var(--spacing-sm);
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
         }
 
         /* Buttons */
         .button {
             padding: 0.85rem 1.7rem;
-            border-radius: 0.5rem;
+            border-radius: var(--radius-sm);
             font-weight: 600;
             font-size: 1.05rem;
-            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: background-color var(--transition-normal), transform var(--transition-fast), box-shadow var(--transition-normal);
+            box-shadow: 0 4px 15px var(--shadow-light);
         }
         .button.primary {
-            background-color: #007AFF;
+            background-color: var(--primary-blue);
         }
         .button.primary:hover {
-            background-color: #0056B3;
+            background-color: var(--primary-blue-dark);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 20px var(--shadow-medium);
         }
         .button:not(.primary) {
-            background-color: #1D1D1F;
-            color: #fff;
+            background-color: var(--text-primary);
+            color: var(--white);
         }
         .button:not(.primary):hover {
-            background-color: #444;
+            background-color: var(--text-light);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 6px 20px var(--shadow-medium);
         }
 
         /* General Section Styling */
         section {
-            padding: 4rem 0;
+            padding: var(--spacing-3xl) 0;
             text-align: center;
+            transition: all 0.6s ease-in-out;
         }
         section:nth-of-type(even) {
-            background-color: #F0F2F5;
+            background-color: var(--background-alt);
         }
         h2 {
-            font-size: 2.5rem;
-            color: #1D1D1F;
-            margin-bottom: 2.5rem;
+            font-size: var(--font-size-h2);
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xl);
             font-weight: 700;
             letter-spacing: -0.03em;
         }
+        
+        /* Scroll animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-        /* Feature Items */
-        .feature-item {
-            background: #fff;
-            padding: 2rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+        /* Components Header */
+        .components-header {
+            text-align: center;
+            margin-bottom: var(--spacing-3xl);
+        }
+        
+        .components-description {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto var(--spacing-xl) auto;
+            color: #cbd5e1;
+        }
+
+        /* Tools Grid */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+            max-width: 100%;
+        }
+        
+        .tool-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            box-shadow: 
+                0 15px 30px rgba(0,0,0,0.12),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
             text-align: left;
-            transition: transform 0.2s ease, box-shadow 0.3s ease;
-            border: 1px solid #E0E0E0;
-            height: 100%;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-height: 140px;
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+            backdrop-filter: blur(20px);
+            animation: toolCardAppear 0.6s ease-out forwards;
         }
-        .feature-item:hover {
-            transform: translateY(-0.5rem);
-            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        
+        @keyframes toolCardAppear {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
-        .feature-item h3 {
-            color: #007AFF;
-            font-size: 1.4rem;
-            margin-bottom: 0.75rem;
+        
+        .tool-card:nth-child(1) { animation-delay: 0.1s; }
+        .tool-card:nth-child(2) { animation-delay: 0.2s; }
+        .tool-card:nth-child(3) { animation-delay: 0.3s; }
+        .tool-card:nth-child(4) { animation-delay: 0.4s; }
+        .tool-card:nth-child(5) { animation-delay: 0.5s; }
+        .tool-card:nth-child(6) { animation-delay: 0.6s; }
+        .tool-card:nth-child(7) { animation-delay: 0.7s; }
+        .tool-card:nth-child(8) { animation-delay: 0.8s; }
+        
+        .tool-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 
+                0 30px 60px rgba(0,0,0,0.25),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
         }
-        .feature-item p {
-            font-size: 1rem;
-            color: #666;
+        
+        .tool-icon {
+            font-size: 2rem;
+            margin-bottom: var(--spacing-xs);
+            display: block;
+        }
+        
+        .tool-card h3 {
+            color: #60a5fa;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+        
+        .tool-card p {
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            line-height: 1.4;
+            flex-grow: 1;
         }
 
         /* How It Works */
         .how-it-works .lead {
             font-size: 1.1rem;
             max-width: 800px;
-            margin: 0 auto 2.5rem auto;
-            color: #666;
+            margin: 0 auto var(--spacing-xl) auto;
+            color: var(--text-secondary);
         }
         .step-item {
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            background: var(--white);
+            padding: var(--spacing-md);
+            border-radius: var(--radius-md);
+            box-shadow: 0 5px 20px var(--shadow-light);
             text-align: left;
-            transition: transform 0.2s ease;
-            border: 1px solid #E0E0E0;
+            transition: transform var(--transition-fast);
+            border: 1px solid var(--border-light);
             display: flex;
             align-items: center;
-            margin-bottom: 1.5rem;
+            margin-bottom: var(--spacing-md);
         }
         .step-item:last-child {
             margin-bottom: 0;
@@ -213,128 +497,308 @@
         .step-number {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #007AFF;
-            margin-right: 1.5rem;
+            color: var(--primary-blue);
+            margin-right: var(--spacing-md);
             flex-shrink: 0;
         }
         .step-item h3 {
             font-size: 1.3rem;
-            color: #1D1D1F;
-            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
         }
         .step-item p {
-            font-size: 1rem;
-            color: #666;
+            font-size: var(--font-size-body);
+            color: var(--text-secondary);
         }
 
         /* Persona Section */
         .persona-section {
-            background: linear-gradient(135deg, #E6EEF9, #D1E0F0);
-            padding: 4rem 0;
+            background: var(--background-persona);
+            padding: var(--spacing-3xl) 0;
         }
         .persona-section h2 {
-            color: #1D1D1F;
+            color: var(--text-primary);
         }
         .persona-section .lead {
             font-size: 1.1rem;
             max-width: 800px;
-            margin: 0 auto 2rem auto;
-            color: #444;
+            margin: 0 auto var(--spacing-lg) auto;
+            color: var(--text-light);
         }
-        .persona-examples .callout {
-            background-color: #fff;
-            border: 1px solid #E0E0E0;
-            border-left: 5px solid #007AFF;
-            border-radius: 0.5rem;
-            padding: 1rem 1.5rem;
-            margin-bottom: 1rem;
-            font-family: 'Menlo', 'Consolas', monospace;
-            font-size: 0.95rem;
-            color: #1D1D1F;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-        .persona-examples .callout strong {
-            color: #007AFF;
-        }
-
-        /* Conversation Demo */
-        .conversation-demo {
-            background-color: #EBF2F7; /* Light blue background for chat */
-            border-radius: 1rem;
-            padding: 1.5rem;
-            max-width: 600px;
-            margin: 3rem auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            overflow: hidden; /* For animations */
-        }
-
-        .message-container {
+        .persona-examples {
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: var(--spacing-sm);
         }
-
-        .message-bubble {
-            max-width: 80%;
-            padding: 0.75rem 1rem;
-            border-radius: 1.2rem;
-            position: relative;
-            word-wrap: break-word;
+        
+        .persona-examples .callout {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-left: 4px solid #60a5fa;
+            border-radius: var(--radius-md);
+            padding: var(--spacing-md);
+            margin-bottom: 0;
+            font-family: var(--font-mono);
             font-size: 0.95rem;
-            line-height: 1.4;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            color: #e2e8f0;
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.1),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: all var(--transition-normal);
+            backdrop-filter: blur(20px);
+        }
+        
+        .persona-examples .callout strong {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        .persona-examples .callout:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 
+                0 15px 35px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            border-left-color: #3b82f6;
+        }
+
+        /* Demo Container */
+        .demo-container {
+            max-width: 600px;
+            height: 400px;
+            overflow-y: hidden;
+            margin: 0 auto;
+            padding: var(--spacing-md);
+        }
+        
+        .demo-message-pair {
+            margin-bottom: var(--spacing-lg);
             opacity: 0;
-            transform: translateY(20px);
-            animation: fadeInSlideUp 0.5s ease-out forwards;
+            transform: translateY(30px);
+            animation: messagePairAppear 0.8s ease-out forwards;
         }
-
-        .message-bubble.user {
-            background-color: #007AFF;
-            color: #fff;
-            align-self: flex-end;
-            border-bottom-right-radius: 0.3rem; /* Tail effect */
+        
+        .demo-message-pair.m1 { 
+            animation: messagePairCycle1 14s ease-in-out infinite;
         }
-
-        .message-bubble.bot {
-            background-color: #fff;
-            color: #1D1D1F;
-            align-self: flex-start;
-            border-bottom-left-radius: 0.3rem; /* Tail effect */
+        .demo-message-pair.m2 { 
+            animation: messagePairCycle2 14s ease-in-out infinite;
         }
-
-        /* Animation for messages */
-        @keyframes fadeInSlideUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
+        
+        @keyframes messagePairCycle1 {
+            0% { opacity: 0; transform: translateY(30px); }
+            7% { opacity: 1; transform: translateY(0); }
+            43% { opacity: 1; transform: translateY(0); }
+            50% { opacity: 0; transform: translateY(-30px); }
+            100% { opacity: 0; transform: translateY(-30px); }
+        }
+        
+        @keyframes messagePairCycle2 {
+            0% { opacity: 0; transform: translateY(30px); }
+            50% { opacity: 0; transform: translateY(30px); }
+            57% { opacity: 1; transform: translateY(0); }
+            93% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-30px); }
+        }
+        
+        .message {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .message.user {
+            align-items: flex-start;
+        }
+        
+        .message.bot {
+            align-items: flex-start;
+        }
+        
+        .message-header {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            padding: 0 0.5rem;
+        }
+        
+        .message.user .message-header {
+            text-align: left;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .message.bot .message-header {
+            text-align: left;
+            color: #60a5fa;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .bot-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+        }
+        
+        .message-bubble {
+            max-width: 85%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            position: relative;
+        }
+        
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border-bottom-left-radius: 6px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+        
+        .message.bot .message-bubble {
+            background: linear-gradient(145deg, rgba(96, 165, 250, 0.15), rgba(59, 130, 246, 0.1));
+            color: #f1f5f9;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-bottom-left-radius: 6px;
+            backdrop-filter: blur(20px);
+            box-shadow: 
+                0 8px 25px rgba(59, 130, 246, 0.15),
+                0 0 0 1px rgba(96, 165, 250, 0.1);
+            position: relative;
+        }
+        
+        .tool-action {
+            background: rgba(96, 165, 250, 0.2);
+            color: #60a5fa;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin: 0.5rem 0;
+            border: 1px solid rgba(96, 165, 250, 0.4);
+            animation: toolPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes toolPulse {
+            0%, 100% { 
+                box-shadow: 0 0 5px rgba(96, 165, 250, 0.3);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 15px rgba(96, 165, 250, 0.6);
+                transform: scale(1.02);
             }
         }
+        
+        .tool-result {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 3px solid #22c55e;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.85rem;
+            color: #a7f3d0;
+        }
+        
+        .tool-source {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.75rem;
+            font-style: italic;
+            margin-top: 0.25rem;
+        }
+        
+        .sarah-header { color: #60a5fa; }
+        .mike-header { color: #10b981; }
+        .emma-header { color: #f87171; }
+        
+        .message.mike-msg .message-bubble {
+            background: linear-gradient(135deg, #059669, #047857);
+        }
+        
+        .message.emma-msg .message-bubble {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+            max-width: 80px;
+            opacity: 0;
+            animation: typingAppear 0.5s ease-out 4.5s forwards;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        @keyframes typingAppear {
+            to { opacity: 1; }
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #60a5fa;
+            animation: typingPulse 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingPulse {
+            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+            40% { opacity: 1; transform: scale(1); }
+        }
 
-        .message-bubble:nth-child(1) { animation-delay: 0.2s; }
-        .message-bubble:nth-child(2) { animation-delay: 0.8s; }
-        .message-bubble:nth-child(3) { animation-delay: 1.4s; }
-        .message-bubble:nth-child(4) { animation-delay: 2.0s; }
-        .message-bubble:nth-child(5) { animation-delay: 2.6s; }
-        .message-bubble:nth-child(6) { animation-delay: 3.2s; }
-        .message-bubble:nth-child(7) { animation-delay: 3.8s; }
-        .message-bubble:nth-child(8) { animation-delay: 4.4s; }
+        /* Demo Frame */
+        .demo-container {
+            background: linear-gradient(145deg, rgba(20, 20, 30, 0.9), rgba(10, 10, 20, 0.95));
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-md);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
 
         /* Footer */
         footer {
             margin-top: auto;
-            padding: 2.5rem 0;
-            background: #1D1D1F;
-            color: #fff;
+            padding: var(--spacing-2xl) 0;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            color: #e2e8f0;
             text-align: center;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
+        
         footer a {
-            color: #fff;
+            color: #60a5fa;
             text-decoration: none;
             font-weight: 600;
-            transition: text-decoration 0.2s ease;
+            transition: all var(--transition-normal);
         }
+        
         footer a:hover {
+            color: #3b82f6;
             text-decoration: underline;
         }
 
@@ -343,28 +807,83 @@
             text-align: center;
         }
         .margin-bottom-2 {
-            margin-bottom: 2rem;
+            margin-bottom: var(--spacing-lg);
         }
 
         /* Responsive Adjustments */
-        @media screen and (max-width: 767px) {
+        @media screen and (max-width: 1024px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-2xl);
+                text-align: center;
+            }
+            
+            .hero-left {
+                text-align: center;
+            }
+            
+            .hero-description {
+                max-width: 600px;
+                margin: 0 auto var(--spacing-xl) auto;
+            }
+        }
+        
+        @media screen and (max-width: 768px) {
             .hero {
-                padding: 4rem 0;
+                min-height: 70vh;
             }
-            .hero h1 {
-                font-size: 2.5rem;
+            
+            .hero-content {
+                padding: var(--spacing-xl) var(--spacing-sm);
+                gap: var(--spacing-xl);
             }
-            .hero .lead {
-                font-size: 1.2rem;
+            
+            .hero-actions {
+                flex-direction: column;
+                align-items: center;
             }
-            .hero-image {
-                max-width: 90%;
+            
+            .cta-primary,
+            .cta-secondary {
+                width: 100%;
+                max-width: 300px;
+                text-align: center;
             }
-            h2 {
+            
+            .hero-stats {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+            }
+            
+            .tools-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-md);
+            }
+            
+            .tool-card {
+                padding: var(--spacing-sm);
+                width: 100%;
+                min-height: 120px;
+            }
+            
+            .tool-icon {
                 font-size: 2rem;
             }
+            
+            .stat-item {
+                display: flex;
+                align-items: center;
+                gap: var(--spacing-sm);
+                text-align: left;
+            }
+            
+            .stat-number {
+                font-size: 1.5rem;
+                margin-bottom: 0;
+            }
+            
             .feature-item {
-                padding: 1.5rem;
+                padding: var(--spacing-md);
             }
             .step-item {
                 flex-direction: column;
@@ -372,117 +891,256 @@
             }
             .step-number {
                 margin-right: 0;
-                margin-bottom: 1rem;
+                margin-bottom: var(--spacing-sm);
             }
             .persona-examples .callout {
                 font-size: 0.85rem;
             }
-            .conversation-demo {
-                padding: 1rem;
+            .demo-container {
+                padding: var(--spacing-sm);
+                margin: 0;
             }
+            
             .message-bubble {
-                font-size: 0.85rem;
+                font-size: 0.8rem;
+                padding: 0.6rem 0.8rem;
+            }
+            
+            .message-header {
+                font-size: 0.75rem;
+            }
+        }
+        
+        @media screen and (max-width: 480px) {
+            .hero-actions {
+                gap: var(--spacing-sm);
+            }
+            
+            .feature-highlight {
+                font-size: 0.9rem;
             }
         }
     </style>
 </head>
 <body>
-    <main>
-        <section class="hero">
+    <header role="banner">
+        <nav role="navigation" aria-label="Main navigation">
+            <!-- Navigation will be added if needed -->
+        </nav>
+    </header>
+    <main role="main">
+        <section class="hero" role="banner" aria-labelledby="hero-title">
+            <div class="hero-background">
+                <div class="hero-grid"></div>
+            </div>
             <div class="grid-container hero-content">
-                <p class="free-tag">It's Free</p>
-                <h1>Elevate Your Group Chats with <span>Intelligent AI</span></h1>
-                <p class="lead">The Telegram Fact-Checker Bot brings real-time fact-checking, deep analysis, and dynamic conversations directly to your fingertips. Smart, seamless, and always on point.</p>
-                <div class="button-group">
-                    <a href="https://t.me/LetMeCheckThatBot" class="button primary large">Add to Telegram</a>
-                    <a href="https://github.com/dnakhla/TelegramFactChecker" class="button large">View on GitHub</a>
-                </div>
-            </div>
-        </section>
-
-        <section id="conversation-demo" class="demos">
-            <div class="grid-container">
-                <h2 class="text-center">See the Conversation in Action</h2>
-                <p class="lead text-center">Experience how the Fact-Checker Bot interacts naturally within a Telegram chat, providing instant, accurate responses.</p>
-                <div class="conversation-demo">
-                    <div class="message-container">
-                        <div class="message-bubble user">Hey bot, what's the capital of Australia?</div>
-                        <div class="message-bubble bot">The capital of Australia is Canberra.</div>
-                        <div class="message-bubble user">robot, tell me about the latest climate change report.</div>
-                        <div class="message-bubble bot">The latest IPCC report (AR6 Synthesis Report) emphasizes that human activities are unequivocally causing global warming, leading to widespread and rapid changes. It highlights the urgency of deep, rapid, and sustained greenhouse gas emission reductions.</div>
-                        <div class="message-bubble user">skeptic-bot, is the moon landing real?</div>
-                        <div class="message-bubble bot">While some theories persist, overwhelming scientific consensus and evidence, including lunar samples, independent tracking, and photographic evidence, confirm the Apollo moon landings were real.</div>
+                <div class="hero-left">
+                    <div class="hero-badge">
+                        <span class="free-tag">Free & Open Source</span>
+                    </div>
+                    <h1 id="hero-title">AI-Powered Telegram Bot for <span class="hero-highlight">Any Persona</span></h1>
+                    <div class="persona-showcase">
+                        <div class="persona-text">Type any message like: </div>
+                        <div class="persona-cycler">
+                            <div class="message-input">
+                                <span id="typewriter"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hero-actions">
+                        <a href="https://t.me/LetMeCheckThatBot" class="cta-primary" aria-label="Add Telegram Fact-Checker Bot to your chat">
+                            Add to Telegram
+                        </a>
+                        <a href="https://github.com/dnakhla/TelegramFactChecker" class="cta-secondary" aria-label="View source code on GitHub">
+                            View Source
+                        </a>
                     </div>
                 </div>
-            </div>
-        </section>
-
-        <section id="components" class="features">
-            <div class="grid-container">
-                <h2 class="text-center">Core Components</h2>
-                <p class="lead text-center">The Fact-Checker Bot is built on a foundation of powerful, interconnected components, each designed to deliver a superior AI experience.</p>
-                <div class="grid-x grid-margin-x small-up-1 medium-up-2 large-up-3">
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>Intelligent Agent Core</h3>
-                            <p>At its heart, the bot features an advanced AI agent capable of understanding complex queries, dynamically selecting the best tools, and synthesizing information into coherent, accurate responses. It's the brain that orchestrates all interactions.</p>
+                <div class="hero-right">
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <span class="stat-number">24/7</span>
+                            <span class="stat-label">Always Available</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number">∞</span>
+                            <span class="stat-label">Unlimited Usage</span>
                         </div>
                     </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>Advanced Research Suite</h3>
-                            <p>Unlock unparalleled access to information. Our bot leverages cutting-edge search capabilities across the web, real-time news feeds, Reddit discussions, and diverse alternative sources to provide you with the most comprehensive and balanced insights available.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>AI-Powered Analysis Engine</h3>
-                            <p>Transform raw data into actionable intelligence. This engine excels at summarizing lengthy content, filtering vast datasets to pinpoint critical information, and analyzing trends to reveal deeper insights, empowering you with clarity and foresight.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>Specialized Toolset</h3>
-                            <p>Empower your conversations with a versatile collection of specialized tools. From instant math calculations and comprehensive image/video searches to practical accommodation lookups, our bot provides immediate access to diverse functionalities, enhancing every interaction.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>Dynamic Persona Module</h3>
-                            <p>Unleash the bot's personality! This module allows the bot to adopt any persona you define, transforming interactions from purely factual to engaging, witty, or even skeptical. Tailor the bot's character to match your group's vibe, making every conversation unique and entertaining.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>Seamless Telegram Integration</h3>
-                            <p>Effortless integration into your Telegram workflow. Designed for natural, conversational interaction, the bot seamlessly becomes a part of your existing group chats, providing instant value without disrupting your communication style.</p>
-                        </div>
+                    <div class="hero-features">
+                        <div class="feature-highlight">✓ Start messages with "persona"-bot</div>
+                        <div class="feature-highlight">✓ Multiple AI personas</div>
+                        <div class="feature-highlight">✓ Intelligent analysis</div>
+                        <div class="feature-highlight">✓ No setup required</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="personas" class="persona-section">
+        <section id="conversation-demo" class="hero" role="region" aria-labelledby="demo-title">
+            <div class="hero-background">
+                <div class="hero-grid"></div>
+            </div>
+            <div class="grid-container hero-content">
+                <div class="hero-left">
+                    <h2 id="demo-title">See the <span class="hero-highlight">Magic</span> in Action</h2>
+                    <p class="hero-description">
+                        First, add @LetMeCheckThatBot to your Telegram group chat. Then simply start any message with "persona"-bot (like "trump-bot", "chef-bot", "data-bot") and watch it respond instantly with the requested personality and expertise.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="#components" class="cta-secondary" aria-label="Learn about the bot's features">Explore Features</a>
+                    </div>
+                </div>
+                <div class="hero-right">
+                    <div class="demo-container">
+                        <!-- Group Project Planning Demo -->
+                        <div class="demo-message-pair m1">
+                            <div class="message user mike-msg">
+                                <div class="message-header mike-header">Alex</div>
+                                <div class="message-bubble">
+                                    Hey team! We need to finalize our startup pitch deck by Friday
+                                </div>
+                            </div>
+                            <div class="message user emma-msg">
+                                <div class="message-header emma-header">Sarah</div>
+                                <div class="message-bubble">
+                                    research-bot, what are the latest trends in AI funding for 2024?
+                                </div>
+                            </div>
+                            <div class="message bot">
+                                <div class="message-header">
+                                    <div class="bot-icon">🔍</div>
+                                    Research-Bot
+                                </div>
+                                <div class="message-bubble">
+                                    AI funding hit $50B in 2024! Top trends: enterprise AI (40% of deals), healthcare AI up 300%, and climate tech AI growing fast. VCs love B2B solutions with clear ROI. Focus on practical applications! 📊
+                                </div>
+                            </div>
+                            <div class="message user">
+                                <div class="message-header">Mike</div>
+                                <div class="message-bubble">
+                                    Perfect! That's exactly what we needed @everyone
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="demo-message-pair m2">
+                            <div class="message user emma-msg">
+                                <div class="message-header emma-header">Lisa</div>
+                                <div class="message-bubble">
+                                    Our professor wants citations for tomorrow's group assignment
+                                </div>
+                            </div>
+                            <div class="message user mike-msg">
+                                <div class="message-header mike-header">Jake</div>
+                                <div class="message-bubble">
+                                    scholar-bot, find peer-reviewed papers on climate change impacts
+                                </div>
+                            </div>
+                            <div class="message bot">
+                                <div class="message-header">
+                                    <div class="bot-icon">🎓</div>
+                                    Scholar-Bot
+                                </div>
+                                <div class="message-bubble">
+                                    Found 47 recent papers from Nature, Science & Cell! Key findings: sea level rise accelerating, extreme weather +67% since 2000. Top citations: Hansen et al. (2023), IPCC AR6 Working Group reports. Perfect for your assignment! 📚
+                                </div>
+                            </div>
+                            <div class="message user">
+                                <div class="message-header emma-header">Lisa</div>
+                                <div class="message-bubble">
+                                    You're a lifesaver Jake! Sharing this with the whole study group 🙌
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="components" class="hero" role="region" aria-labelledby="components-title">
+            <div class="hero-background">
+                <div class="hero-grid"></div>
+            </div>
             <div class="grid-container">
-                <h2 class="text-center">🎭 Dynamic Personas: Talk to Your Bot, Your Way</h2>
-                <p class="lead text-center">The Fact-Checker Bot isn't just smart; it's incredibly adaptable! Instruct it to adopt any persona, allowing for engaging and tailored interactions. Whether you seek a serious academic, a witty comedian, or a skeptical debater, the bot responds in character.</p>
-                <p class="lead text-center">This unique feature unlocks endless possibilities, making your group chats more dynamic and fun, all while still delivering accurate information.</p>
-                <h3 class="text-center margin-bottom-2">How to Use Dynamic Personas:</h3>
-                <div class="grid-x grid-margin-x align-center">
-                    <div class="cell small-12 medium-10 large-8">
-                        <div class="persona-examples">
-                            <div class="callout">
-                                <strong>optimist-bot,</strong> what's the future of AI?
-                            </div>
-                            <div class="callout">
-                                <strong>skeptic-bot,</strong> tell me about climate change.
-                            </div>
-                            <div class="callout">
-                                <strong>bro-bot,</strong> what's up with the new iPhone?
-                            </div>
-                            <div class="callout">
-                                <strong>professor-bot,</strong> explain quantum physics simply.
-                            </div>
+                <div class="components-header">
+                    <h2 id="components-title">A Powerhouse of <span class="hero-highlight">Intelligent Tools</span></h2>
+                    <p class="components-description">After adding @LetMeCheckThatBot to your group, activate any tool by starting with "persona"-bot format. Use specific commands like "data-bot", "research-bot", "math-bot" to access specialized capabilities instantly for seamless team collaboration.</p>
+                </div>
+                <div class="tools-grid">
+                    <div class="tool-card">
+                        <span class="tool-icon">🔍</span>
+                        <h3>Web Search & Research</h3>
+                        <p>Real-time web scraping, news aggregation, and multi-source research with intelligent filtering and bias detection.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">📊</span>
+                        <h3>Data Analysis Engine</h3>
+                        <p>Process CSV files, analyze datasets, generate insights, create visualizations, and perform statistical calculations instantly.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">🏨</span>
+                        <h3>Travel & Accommodation</h3>
+                        <p>Find hotels, restaurants, and local businesses with price filtering, review analysis, and location-based recommendations.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">🧮</span>
+                        <h3>Mathematical Calculator</h3>
+                        <p>Advanced calculations, equation solving, unit conversions, and mathematical modeling with step-by-step explanations.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">🖼️</span>
+                        <h3>Image Search & Analysis</h3>
+                        <p>Visual content discovery, reverse image search, image analysis, and visual similarity detection across the web.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">📰</span>
+                        <h3>News & Fact Checking</h3>
+                        <p>Real-time news monitoring, fact verification, source credibility assessment, and bias analysis from multiple outlets.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">💬</span>
+                        <h3>Reddit Discussion Mining</h3>
+                        <p>Extract insights from Reddit threads, analyze community sentiment, and gather diverse perspectives on any topic.</p>
+                    </div>
+                    <div class="tool-card">
+                        <span class="tool-icon">🎭</span>
+                        <h3>Dynamic AI Personas</h3>
+                        <p>Adaptive personality system with role-based responses, expertise simulation, and contextual behavior modification.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="personas" class="hero" role="region" aria-labelledby="personas-title">
+             <div class="hero-background">
+                <div class="hero-grid"></div>
+            </div>
+            <div class="grid-container hero-content">
+                <div class="hero-left">
+                    <h2 id="personas-title">Unleash Your Bot's <span class="hero-highlight">Personality</span></h2>
+                    <p class="hero-description">
+                        After adding @LetMeCheckThatBot to your group, simply start your message with any persona name + "-bot" to activate that personality. Try "professor-bot", "comedian-bot", "CEO-bot", or create your own. The bot adapts instantly to match your requested style and expertise.
+                    </p>
+                     <div class="hero-actions">
+                        <a href="https://t.me/LetMeCheckThatBot" class="cta-primary" aria-label="Add Telegram Fact-Checker Bot to your chat">
+                            Try It Now
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-right">
+                    <div class="persona-examples">
+                        <div class="callout">
+                            <strong>optimist-bot,</strong> what's the future of AI?
+                        </div>
+                        <div class="callout">
+                            <strong>skeptic-bot,</strong> tell me about climate change.
+                        </div>
+                        <div class="callout">
+                            <strong>bro-bot,</strong> what's up with the new iPhone?
+                        </div>
+                        <div class="callout">
+                            <strong>professor-bot,</strong> explain quantum physics simply.
                         </div>
                     </div>
                 </div>
@@ -490,7 +1148,7 @@
         </section>
     </main>
 
-    <footer>
+    <footer role="contentinfo">
         <div class="grid-container">
             <p>&copy; 2024 Telegram Fact-Checker Bot. All rights reserved. | <a href="https://github.com/dnakhla/TelegramFactChecker/blob/master/LICENSE">License</a></p>
         </div>
@@ -499,8 +1157,105 @@
     <!-- Foundation JavaScript -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/foundation-sites@6.7.4/dist/js/foundation.min.js"></script>
+    <!-- Typed.js for typewriter effect -->
+    <script src="https://cdn.jsdelivr.net/npm/typed.js@2.0.16/lib/typed.min.js"></script>
     <script>
         $(document).foundation();
+
+        // Tools grid functionality
+        $(document).ready(function() {
+            // Typewriter effect - fallback if Typed.js doesn't load
+            if (typeof Typed !== 'undefined') {
+                const typed = new Typed('#typewriter', {
+                    strings: [
+                        'trump-bot, what\'s your opinion on electric cars?',
+                        'biden-bot, explain your infrastructure plan',
+                        'joerogan-bot, tell me about DMT and consciousness',
+                        'jesus-bot, what would you say about modern society?',
+                        'einstein-bot, explain time dilation simply',
+                        'shakespeare-bot, write me a sonnet about coding',
+                        'gordon-ramsay-bot, critique my cooking skills',
+                        'oprah-bot, inspire me to achieve my dreams',
+                        'morgan-freeman-bot, narrate my life story',
+                        'kanyewest-bot, give me your thoughts on creativity',
+                        'elonmusk-bot, what\'s the future of Mars colonization?',
+                        'steve-jobs-bot, how do you approach innovation?',
+                        'snoop-bot, what\'s your philosophy on life?',
+                        'yoda-bot, teach me wisdom about patience',
+                        'sherlock-bot, solve this mystery for me',
+                        'tony-stark-bot, design me a cool gadget',
+                        'gandalf-bot, give me sage advice about courage',
+                        'darth-vader-bot, explain the power of the dark side',
+                        'bob-ross-bot, teach me to paint happy little trees',
+                        'socrates-bot, question everything I believe'
+                    ],
+                    typeSpeed: 50,
+                    backSpeed: 30,
+                    backDelay: 2000,
+                    startDelay: 1000,
+                    loop: true,
+                    showCursor: true,
+                    cursorChar: '|'
+                });
+            } else {
+                // Simple fallback without typewriter effect
+                const phrases = [
+                    'trump-bot, what\'s your opinion on electric cars?',
+                    'biden-bot, explain your infrastructure plan',
+                    'joerogan-bot, tell me about DMT and consciousness',
+                    'jesus-bot, what would you say about modern society?',
+                    'einstein-bot, explain time dilation simply',
+                    'shakespeare-bot, write me a sonnet about coding',
+                    'gordon-ramsay-bot, critique my cooking skills',
+                    'oprah-bot, inspire me to achieve my dreams',
+                    'morgan-freeman-bot, narrate my life story',
+                    'kanyewest-bot, give me your thoughts on creativity',
+                    'elonmusk-bot, what\'s the future of Mars colonization?',
+                    'steve-jobs-bot, how do you approach innovation?',
+                    'snoop-bot, what\'s your philosophy on life?',
+                    'yoda-bot, teach me wisdom about patience',
+                    'sherlock-bot, solve this mystery for me',
+                    'tony-stark-bot, design me a cool gadget',
+                    'gandalf-bot, give me sage advice about courage',
+                    'darth-vader-bot, explain the power of the dark side',
+                    'bob-ross-bot, teach me to paint happy little trees',
+                    'socrates-bot, question everything I believe'
+                ];
+                let currentPhrase = 0;
+                const typewriterEl = document.getElementById('typewriter');
+                
+                function cyclePhrases() {
+                    typewriterEl.textContent = phrases[currentPhrase];
+                    currentPhrase = (currentPhrase + 1) % phrases.length;
+                }
+                
+                cyclePhrases(); // Show first phrase immediately
+                setInterval(cyclePhrases, 3000);
+            }
+            
+            
+            // Scroll animations
+            function isElementInViewport(el) {
+                const rect = el.getBoundingClientRect();
+                return (
+                    rect.top >= 0 &&
+                    rect.left >= 0 &&
+                    rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                    rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+                );
+            }
+            
+            function handleScrollAnimations() {
+                $('.fade-in').each(function() {
+                    if (isElementInViewport(this)) {
+                        $(this).addClass('visible');
+                    }
+                });
+            }
+            
+            $(window).on('scroll', handleScrollAnimations);
+            handleScrollAnimations(); // Initial check
+        });
     </script>
 </body>
 </html>
