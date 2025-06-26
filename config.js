@@ -12,7 +12,7 @@ export const CONFIG = {
   S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
   AWS_REGION: process.env.AWS_REGION || 'us-east-1',
   MAX_TOKENS: 350,
-  GPT_MODEL: 'gpt-4.1-mini', // Using the model from the original config
+  GPT_MODEL: process.env.GPT_MODEL || 'gpt-4.1',
   MESSAGE_LIMIT: 1000,
   DEFAULT_SENSITIVITY: 75,
   SERPER_API_KEY: process.env.SERPER_API_KEY,

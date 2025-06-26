@@ -207,6 +207,13 @@ if [ "$DO_DEPLOY" = true ]; then
         --function-name "$LAMBDA_FUNCTION_NAME" \
         --zip-file "fileb://$ZIP_FILE_NAME" \
         --region "$AWS_REGION"
+    
+    # Update timeout to 5 minutes (300 seconds)
+    echo -e "Updating Lambda timeout to 5 minutes..."
+    aws lambda update-function-configuration \
+        --function-name "$LAMBDA_FUNCTION_NAME" \
+        --timeout 300 \
+        --region "$AWS_REGION"
 
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Deployment to Lambda successful!${NC}"
@@ -233,7 +240,7 @@ if [ "$DO_SET_ENV" = true ]; then
     fi
 
     echo -e "Setting environment variables for Lambda function: ${GREEN}$LAMBDA_FUNCTION_NAME${NC}..."
-    ENV_VARIABLES="Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPER_API_KEY=${SERPER_API_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-}}"
+    ENV_VARIABLES="Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPER_API_KEY=${SERPER_API_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-},GPT_MODEL=${GPT_MODEL:-gpt-4.1}}"
 
     aws lambda update-function-configuration \
         --function-name "$LAMBDA_FUNCTION_NAME" \

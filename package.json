@@ -8,12 +8,14 @@
     "start": "node index.js",
     "deploy": "bash deploy.sh --deploy --function-name FactCheckerBot-LambdaFunction --region us-east-1",
     "set-env": "bash deploy.sh --set-env --function-name FactCheckerBot-LambdaFunction --region us-east-1 --telegram-token \"$TELEGRAM_BOT_TOKEN\" --openai-key \"$OPENAI_API_KEY\" --s3-bucket \"$S3_BUCKET_NAME\" --serper-key \"$SERPER_API_KEY\" --brave-key \"$BRAVE_API_KEY\"",
-    "logs": "aws logs tail /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1",
+    "logs": "aws logs tail /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1 --follow",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
     "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "lint": "eslint .",
-    "test:syntax": "find . -name '*.js' -not -path '*/node_modules/*' -not -path '*/tests/*' -exec node --check {} \\; && echo 'All files are syntactically valid'"
+    "test:syntax": "find . -name '*.js' -not -path '*/node_modules/*' -not -path '*/tests/*' -exec node --check {} \\; && echo 'All files are syntactically valid'",
+    "list-conversations": "node scripts/listConversationsContent.js",
+    "delete-conversations": "source .env && aws s3 rm s3://${S3_BUCKET_NAME}/fact_checker_bot/groups/ --recursive"
   },
   "keywords": [
     "telegram",
@@ -29,6 +31,7 @@
     "@aws-sdk/client-s3": "^3.200.0",
     "axios": "^1.4.0",
     "dotenv": "^16.0.3",
+    "mathjs": "^12.2.1",
     "moment": "^2.29.4",
     "node-telegram-bot-api": "^0.61.0",
     "openai": "^4.24.1"
