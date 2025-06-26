@@ -119,7 +119,7 @@
 
         /* Buttons */
         .button {
-            padding: 0.85rem 1.7rem; /* Slightly smaller for a sleeker look */
+            padding: 0.85rem 1.7rem;
             border-radius: 0.5rem;
             font-weight: 600;
             font-size: 1.05rem;
@@ -338,6 +338,14 @@
             text-decoration: underline;
         }
 
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+        .margin-bottom-2 {
+            margin-bottom: 2rem;
+        }
+
         /* Responsive Adjustments */
         @media screen and (max-width: 767px) {
             .hero {
@@ -392,77 +400,65 @@
             </div>
         </section>
 
-        <section id="features" class="features">
+        <section id="conversation-demo" class="demos">
             <div class="grid-container">
-                <h2 class="text-center">Unleash the Power of Knowledge</h2>
-                <div class="grid-x grid-margin-x small-up-1 medium-up-2 large-up-4">
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>🔍 Instant Fact-Checking</h3>
-                            <p>Get real-time verification of claims and access to comprehensive, balanced information from diverse sources.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>🧠 AI-Powered Insights</h3>
-                            <p>Beyond facts, the bot summarizes complex topics, filters data, and analyzes trends to provide deeper understanding.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>🛠️ Specialized Tools</h3>
-                            <p>From math calculations to image searches and accommodation lookups, a suite of tools at your command.</p>
-                        </div>
-                    </div>
-                    <div class="cell">
-                        <div class="feature-item">
-                            <h3>💬 Seamless Integration</h3>
-                            <p>Designed for natural, conversational interaction, the bot integrates effortlessly into your existing Telegram group chats.</p>
-                        </div>
+                <h2 class="text-center">See the Conversation in Action</h2>
+                <p class="lead text-center">Experience how the Fact-Checker Bot interacts naturally within a Telegram chat, providing instant, accurate responses.</p>
+                <div class="conversation-demo">
+                    <div class="message-container">
+                        <div class="message-bubble user">Hey bot, what's the capital of Australia?</div>
+                        <div class="message-bubble bot">The capital of Australia is Canberra.</div>
+                        <div class="message-bubble user">robot, tell me about the latest climate change report.</div>
+                        <div class="message-bubble bot">The latest IPCC report (AR6 Synthesis Report) emphasizes that human activities are unequivocally causing global warming, leading to widespread and rapid changes. It highlights the urgency of deep, rapid, and sustained greenhouse gas emission reductions.</div>
+                        <div class="message-bubble user">skeptic-bot, is the moon landing real?</div>
+                        <div class="message-bubble bot">While some theories persist, overwhelming scientific consensus and evidence, including lunar samples, independent tracking, and photographic evidence, confirm the Apollo moon landings were real.</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section id="how-it-works" class="how-it-works">
+        <section id="components" class="features">
             <div class="grid-container">
-                <h2 class="text-center">How It Works: The Intelligent Agent</h2>
-                <p class="lead text-center">Our bot isn't just a simple Q&A system. It's a sophisticated AI agent that thinks, researches, and synthesizes information just like a human expert.</p>
-                <div class="grid-x grid-margin-x align-center">
-                    <div class="cell small-12 medium-10 large-8">
-                        <div class="how-it-works-steps">
-                            <div class="step-item">
-                                <span class="step-number">1</span>
-                                <div>
-                                    <h3>Understands Your Query</h3>
-                                    <p>The AI deeply analyzes your question, understanding intent and context to formulate the best approach.</p>
-                                </div>
-                            </div>
-                            <div class="step-item">
-                                <span class="step-number">2</span>
-                                <div>
-                                    <h3>Strategically Selects Tools</h3>
-                                    <p>It intelligently picks the optimal tools—like web search, news analysis, or data filtering—to gather precise information.</p>
-                                </div>
-                            </div>
-                            <div class="step-item">
-                                <span class="step-number">3</span>
-                                <div>
-                                    <h3>Gathers & Processes Information</h3>
-                                    <p>The bot executes these tools, collecting and processing data, building a comprehensive understanding of the topic.</p>
-                                </div>
-                            </div>
-                            <div class="step-item">
-                                <span class="step-number">4</span>
-                                <div>
-                                    <h3>Delivers Refined Answers</h3>
-                                    <p>Finally, it synthesizes all findings into clear, concise, and conversational responses, delivered naturally in your chat.</p>
-                                </div>
-                            </div>
+                <h2 class="text-center">Core Components</h2>
+                <p class="lead text-center">The Fact-Checker Bot is built on a foundation of powerful, interconnected components, each designed to deliver a superior AI experience.</p>
+                <div class="grid-x grid-margin-x small-up-1 medium-up-2 large-up-3">
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>Intelligent Agent Core</h3>
+                            <p>The brain of the bot, capable of understanding complex queries, selecting optimal tools, and synthesizing information.</p>
+                        </div>
+                    </div>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>Advanced Research Suite</h3>
+                            <p>Access to web, news, Reddit, and alternative sources for comprehensive and balanced information retrieval.</p>
+                        </div>
+                    </div>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>AI-Powered Analysis Engine</h3>
+                            <p>Summarizes content, filters data, and analyzes trends to extract meaningful insights from vast amounts of information.</p>
+                        </div>
+                    </div>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>Specialized Toolset</h3>
+                            <p>A versatile collection of tools for math calculations, image/video searches, accommodation lookups, and more.</p>
+                        </div>
+                    </div>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>Dynamic Persona Module</h3>
+                            <p>Enables the bot to adopt any persona, allowing for engaging and tailored interactions based on user preference.</p>
+                        </div>
+                    </div>
+                    <div class="cell">
+                        <div class="feature-item">
+                            <h3>Seamless Telegram Integration</h3>
+                            <p>Designed for natural, conversational interaction, the bot integrates effortlessly into your existing Telegram group chats.</p>
                         </div>
                     </div>
                 </div>
-                <p class="lead text-center">This multi-step, adaptive approach ensures highly accurate and nuanced answers, far surpassing traditional AI systems.</p>
             </div>
         </section>
 
@@ -488,23 +484,6 @@
                                 <strong>professor-bot,</strong> explain quantum physics simply.
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="conversation-demo" class="demos">
-            <div class="grid-container">
-                <h2 class="text-center">See the Conversation in Action</h2>
-                <p class="lead text-center">Experience how the Fact-Checker Bot interacts naturally within a Telegram chat, providing instant, accurate responses.</p>
-                <div class="conversation-demo">
-                    <div class="message-container">
-                        <div class="message-bubble user">Hey bot, what's the capital of Australia?</div>
-                        <div class="message-bubble bot">The capital of Australia is Canberra.</div>
-                        <div class="message-bubble user">robot, tell me about the latest climate change report.</div>
-                        <div class="message-bubble bot">The latest IPCC report (AR6 Synthesis Report) emphasizes that human activities are unequivocally causing global warming, leading to widespread and rapid changes. It highlights the urgency of deep, rapid, and sustained greenhouse gas emission reductions.</div>
-                        <div class="message-bubble user">skeptic-bot, is the moon landing real?</div>
-                        <div class="message-bubble bot">While some theories persist, overwhelming scientific consensus and evidence, including lunar samples, independent tracking, and photographic evidence, confirm the Apollo moon landings were real.</div>
                     </div>
                 </div>
             </div>
