@@ -1,132 +1,157 @@
-# Telegram Fact-Checker Bot
+# 🤖 Telegram Fact-Checker Bot
 
-A Telegram bot that helps group chats stay factual by providing real-time fact-checking, context analysis, and debate moderation using OpenAI's GPT model and reliable web sources. Deployed as an AWS Lambda function for serverless operation.
+**Empowering your group chats with real-time, AI-powered fact-checking and intelligent analysis.**
 
-🤖 **Try it now!** The bot is live and ready to use:
-- Visit [@LetMeCheckThatBot](https://t.me/LetMeCheckThatBot) on Telegram
-- Add it to your group chats for real-time fact-checking
-- Start a direct conversation to test its capabilities
+This Telegram bot transforms group discussions by providing instant, accurate information and diverse perspectives. Built as an advanced, multi-tool AI agent, it leverages cutting-edge models and a suite of specialized tools to ensure your conversations are grounded in facts.
+
+--- 
+
+### ✨ **Experience the Bot Live!**
+
+- **🚀 Add to Telegram:** [@LetMeCheckThatBot](https://t.me/LetMeCheckThatBot)
+- **🌐 Project Website:** [https://dnakhla.github.io/TelegramFactChecker/](https://dnakhla.github.io/TelegramFactChecker/)
 
 ![Bot Live on Telegram](assets/livedemo.png)
 
+---
+
+## 🧠 How It Works: The Intelligent Agent
+
+More than just a chatbot, this bot operates as a sophisticated AI agent capable of complex reasoning and tool utilization. When you pose a question, it follows a dynamic process:
+
+1.  **Understanding Intent:** The AI analyzes your query to grasp its core meaning and context.
+2.  **Strategic Tool Selection:** It intelligently determines the optimal tool or sequence of tools required (e.g., a web search followed by summarization, or a Reddit search for public sentiment).
+3.  **Information Gathering:** The bot executes the chosen tools, collecting and accumulating relevant data and context from each operation.
+4.  **Synthesized Response:** Finally, it synthesizes all gathered information into a concise, conversational, and easy-to-understand response, delivered naturally as a series of short Telegram messages.
+
+This multi-step, adaptive approach allows for highly accurate and nuanced answers, far surpassing the capabilities of traditional single-prompt AI systems.
+
+## 🌟 Key Features
+
+### 🔍 **Advanced Fact-Checking & Research**
+
+The bot employs a comprehensive suite of tools to ensure information accuracy and provide well-rounded insights:
+
+*   **General Web Search:** For broad factual queries and up-to-date information.
+*   **Current News Search:** Access to the latest headlines and breaking news from reputable sources.
+*   **Reddit Discussions:** Explore public opinion, community sentiment, and user experiences.
+*   **Alternative Sources:** Discover diverse perspectives from independent blogs, Substack, Medium, and more.
+*   **URL Content Fetching:** Directly read and analyze content from any specified webpage.
+
+### 📊 **AI-Powered Analysis & Personalization**
+
+Leveraging powerful AI models, the bot can do more than just search:
+
+*   **Content Summarization:** Condense lengthy articles or research findings into key bullet points.
+*   **Data Manipulation:** Filter, sort, and analyze structured data to extract specific insights.
+*   **Personality Adoption:** Engage with the bot from different viewpoints (e.g., `skeptic-bot, is the earth flat?` or `optimist-bot, what's the future of AI?`).
+
+### 🛠️ **Specialized Utility Tools**
+
+Beyond information retrieval, the bot offers practical utilities:
+
+*   **Math Calculations:** Solve complex mathematical expressions instantly.
+*   **Image & Video Search:** Find relevant visual and multimedia content.
+*   **Accommodation & Places Search:** Look up locations, businesses, and booking information.
+
+### 💬 **Seamless Telegram Integration**
+
+*   **Intuitive Commands:** Easy-to-use commands for quick interaction.
+*   **Contextual Memory:** Stores chat history in AWS S3 to maintain conversation context.
+*   **Chat Management:** Commands to clear history and manage bot messages within the chat.
+*   **Serverless Architecture:** Deployed as an AWS Lambda function for robust scalability and cost-efficiency.
+
 ![Demo of Telegram Fact-Checker Bot](assets/demo.png)
 
-## Features
+## 🚀 Available Commands
 
-- 🔍 **Fact Checking & Context**: Ask the bot questions about the conversation or specific topics for fact-checking and context using reliable sources.
-- 🤖 **AI-Powered Responses**: Direct Q&A capabilities using the `robot` command and GPT model.
-- ⚖️ **Discussion Analysis**: Ask the bot to analyze or summarize recent discussions or debates.
-- 📊 **Message History**: Stores chat history in AWS S3 for context awareness, enabling analysis of past conversations.
-- 🧹 **Chat Management**: Commands to clear history and manage bot messages.
-- ☁️ **Serverless Architecture**: Deployed as AWS Lambda function for scalability and cost-effectiveness.
+*   `robot, [your question]` or `robot [your question]`
+    *   Ask the bot any direct question. The bot will use its tools to find the best answer.
+*   `[personality]-bot, [your question]`
+    *   Engage the bot with a specific persona. Examples: `optimist-bot, what's the future of AI?`, `skeptic-bot, tell me about climate change.`, `bro-bot, what's up?`
+*   `/clearmessages`
+    *   Clears all stored message history for the current chat from S3 and attempts to delete recent bot messages from the Telegram interface.
+*   `/cancel`
+    *   Requests the bot to stop its current operation. Useful if the bot is taking too long or you want to interrupt its process.
 
-## Prerequisites
+## ⚙️ Deployment Guide
 
-- AWS Account with Lambda and S3 access
-- A Telegram Bot Token
-- OpenAI API Key
-- AWS CLI installed and configured
-- Node.js >= 16.0.0 (for local development)
+This bot is designed for serverless deployment on AWS Lambda.
 
-## Deployment
+### Prerequisites
 
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a Lambda function in AWS Console:
-   - Runtime: Node.js 16.x or later
-   - Handler: index.handler
-   - Memory: 256MB (recommended)
-   - Timeout: 30 seconds
+Before you begin, ensure you have:
 
-4. Configure environment variables in Lambda:
-   - Using npm script:
-     ```bash
-     npm run set-env -- --function-name YOUR_FUNCTION_NAME --region your-region
-     ```
-   - Or manually in AWS Console:
-     ```env
-     TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
-     OPENAI_API_KEY=your_openai_api_key_here
-     AWS_REGION=your_aws_region_here
-     S3_BUCKET_NAME=your_s3_bucket_name_here
-     SERPER_API_KEY=your_serper_api_key_here
-     BRAVE_API_KEY=your_brave_api_key_here
-     ```
+*   An **AWS Account** with permissions for Lambda, S3, and API Gateway.
+*   A **Telegram Bot Token** (obtained from BotFather).
+*   An **OpenAI API Key**.
+*   A **Serper API Key** (for Google Search, News, Images, Videos, Places).
+*   A **Brave API Key** (optional, for Brave Search).
+*   **Node.js** (version 16.0.0 or later) installed locally.
+*   **AWS CLI** installed and configured with your AWS credentials.
 
-5. Deploy the code:
-   - Using npm script:
-     ```bash
-     npm run deploy -- --function-name YOUR_FUNCTION_NAME --region your-region
-     ```
-   - Or manually:
-     ```bash
-     bash deploy.sh --deploy --function-name YOUR_FUNCTION_NAME --region your-region
-     ```
+### Steps
 
-6. Set up Telegram Webhook:
-   - Create an API Gateway trigger for your Lambda
-   - Configure your Telegram bot webhook to point to the API Gateway URL
+1.  **Clone the Repository & Install Dependencies**
+    ```bash
+    git clone https://github.com/your-username/factcheckerTelegram.git
+    cd factcheckerTelegram
+    npm install
+    ```
 
-Note: You can also use the existing deployed bot by adding @LetMeCheckThatBot to your Telegram groups or starting a direct conversation with it.
+2.  **Create AWS Lambda Function**
+    *   Navigate to the AWS Lambda console.
+    *   Create a new function with the following settings:
+        *   **Runtime:** Node.js 16.x or later
+        *   **Handler:** `index.handler`
+        *   **Memory:** `512MB` (recommended for optimal performance)
+        *   **Timeout:** Set to `5 minutes (300 seconds)` to accommodate complex, multi-tool operations.
 
-## Local Development
+3.  **Configure Environment Variables**
+    *   Create a `.env` file in your project root by copying the example:
+        ```bash
+        cp .env.example .env
+        ```
+    *   Fill in your API keys and other configurations in the `.env` file.
+    *   Use the provided `set-env` script to upload these variables to your Lambda function:
+        ```bash
+        npm run set-env -- --function-name YOUR_FUNCTION_NAME --region your-region
+        ```
+    *   **Required Environment Variables:**
+        *   `TELEGRAM_BOT_TOKEN`
+        *   `OPENAI_API_KEY`
+        *   `S3_BUCKET_NAME`
+        *   `SERPER_API_KEY`
+        *   `AWS_REGION` (e.g., `us-east-1`)
+        *   `GPT_MODEL` (Optional, defaults to `gpt-4.1`. You can specify other models like `gpt-4-turbo`)
+        *   `BRAVE_API_KEY` (Optional, if you want to use Brave Search)
 
-1. Copy the environment example file:
-   ```bash
-   cp .env.example .env
-   ```
+4.  **Deploy the Code**
+    *   Package and deploy your bot to AWS Lambda using the npm script:
+        ```bash
+        npm run deploy -- --function-name YOUR_FUNCTION_NAME --region your-region
+        ```
 
-2. Configure your .env file with the same variables as Lambda
+5.  **Set up Telegram Webhook**
+    *   Create an **API Gateway HTTP API trigger** for your Lambda function.
+    *   Copy the generated API Gateway URL.
+    *   Configure your Telegram bot's webhook to point to this API Gateway URL. You can do this by visiting:
+        `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=<YOUR_API_GATEWAY_URL>`
 
-3. Start the local development server:
-   ```bash
-   npm start
-   ```
+## 💻 Development & Scripts
 
-## npm Scripts
+*   `npm start`: Start the local development server.
+*   `npm run deploy`: Package and deploy to AWS Lambda.
+*   `npm run set-env`: Set environment variables on AWS Lambda.
+*   `npm run logs`: Tail logs of the Lambda function.
+*   `npm test`: Run Jest tests.
+*   `npm run list-conversations`: List conversation content stored in S3.
+*   `npm run delete-conversations`: Delete all conversation history from S3.
 
-- `npm start` - Start the local development server
-- `npm run deploy` - Package and deploy to AWS Lambda
-- `npm run set-env` - Set environment variables on AWS Lambda
-- `npm run logs` - Tail logs of the Lambda function
-- `npm test` - Run Jest tests
-- `npm run test:watch` - Run tests in watch mode
-- `npm run test:coverage` - Run tests with coverage
-- `npm run lint` - Run ESLint
-- `npm run test:syntax` - Check JavaScript syntax
+## 🤝 Contributing
 
-## Available Commands
+Contributions are highly welcome! If you have ideas for new features, improvements, or bug fixes, please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-- `/clearmessages` - Clears all stored message history from S3 for the chat and attempts to delete messages previously sent by the bot in the chat interface.
-- `robot, [question]` or `robot [question]` - Ask the bot a direct question
+## 📄 License
 
-## Features in Detail
-
-![Demo of Telegram Fact-Checker Bot](assets/demo2.png)
-
-### Context Analysis
-The bot uses OpenAI's GPT model to analyze conversations and provides context from reliable sources. To gather information, the bot utilizes web searches via Google Search and Brave Search. Some example sources include:
-- Reuters and Associated Press
-- BBC News and Wall Street Journal
-- Academic journals and research papers
-- Government databases and statistics
-
-### Discussion Analysis
-Leveraging the stored message history, you can ask the bot (`robot` command) to analyze or summarize recent discussions or debates within the chat. The bot uses its AI capabilities to provide an objective overview based on the conversation history.
-
-### Message Storage
-Messages are stored in AWS S3 for:
-- Maintaining conversation context
-- Analyzing discussion patterns
-- Providing relevant historical context
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License. See package.json for details.
+This project is licensed under the MIT License - see the `LICENSE` file for details.
