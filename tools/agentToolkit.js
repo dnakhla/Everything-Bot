@@ -200,6 +200,85 @@ export const analyze = createToolWrapper(
   }
 );
 
+/**
+ * Fetch and analyze content from a URL
+ * @param {string} url - URL to fetch
+ * @param {string} instruction - What to analyze in the content
+ * @returns {Promise<string>} Fetched and analyzed content
+ */
+export const fetch_url = createToolWrapper(
+  async (url, instruction = 'summarize the main content') => {
+    try {
+      // Import axios for HTTP requests
+      const axios = (await import('axios')).default;
+      
+      // Validate URL
+      const urlPattern = /^https?:\/\//i;
+      if (!urlPattern.test(url)) {
+        throw new Error('Invalid URL format. Must start with http:// or https://');
+      }
+      
+      // Fetch the webpage content
+      const response = await axios.get(url, {
+        timeout: 30000,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; FactCheckerBot/1.0)'
+        },
+        maxContentLength: 500000, // 500KB limit
+        maxBodyLength: 500000
+      });
+      
+      let content = response.data;
+      
+      // Basic HTML cleanup if content is HTML
+      if (response.headers['content-type']?.includes('text/html')) {
+        // Remove script and style tags
+        content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+        content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        // Remove HTML tags and decode entities
+        content = content.replace(/<[^>]*>/g, ' ');
+        content = content.replace(/&nbsp;/g, ' ');
+        content = content.replace(/&amp;/g, '&');
+        content = content.replace(/&lt;/g, '<');
+        content = content.replace(/&gt;/g, '>');
+        content = content.replace(/&quot;/g, '"');
+        // Clean up whitespace
+        content = content.replace(/\s+/g, ' ').trim();
+      }
+      
+      // Truncate if too long
+      if (content.length > 10000) {
+        content = content.substring(0, 10000) + '... [truncated]';
+      }
+      
+      // Use the analyze tool to process the content according to instruction
+      const analyzedResult = await ContentAnalysis.summarizeContent(content, { 
+        instruction: instruction,
+        maxPoints: 8 
+      });
+      
+      return `📄 Content from ${url}:\n\n${analyzedResult}`;
+      
+    } catch (error) {
+      if (error.code === 'ENOTFOUND') {
+        return `❌ Could not reach ${url} - domain not found`;
+      } else if (error.code === 'ETIMEDOUT') {
+        return `❌ Timeout while fetching ${url} - site took too long to respond`;
+      } else if (error.response?.status) {
+        return `❌ HTTP ${error.response.status} error while fetching ${url}`;
+      } else {
+        return `❌ Error fetching ${url}: ${error.message}`;
+      }
+    }
+  },
+  {
+    name: 'fetch_url',
+    category: 'core',
+    description: 'Fetch and analyze web page content',
+    formatResult: (result) => result
+  }
+);
+
 // Helper functions
 function parseTimeframe(timeframe) {
   const match = timeframe.match(/^(\d+)([hdw])$/);

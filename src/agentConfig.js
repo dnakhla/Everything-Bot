@@ -154,6 +154,28 @@ export function getAgentTools() {
     {
       type: 'function',
       function: {
+        name: 'fetch_url',
+        description: 'Fetch and analyze content from a specific URL. Use this to read articles, documentation, or any web page content directly.',
+        parameters: {
+          type: 'object',
+          properties: {
+            url: {
+              type: 'string',
+              description: 'The URL to fetch and analyze (must be a valid HTTP/HTTPS URL)'
+            },
+            instruction: {
+              type: 'string',
+              description: 'What to look for or analyze in the fetched content (e.g., "summarize the article", "find pricing information", "extract key facts")',
+              default: 'summarize the main content'
+            }
+          },
+          required: ['url']
+        }
+      }
+    },
+    {
+      type: 'function',
+      function: {
         name: 'send_messages',
         description: 'Send your final response as multiple chat messages for better messaging platform UX. Use this instead of one long response.',
         parameters: {
@@ -243,7 +265,7 @@ export function getAgentSystemPrompt(personality = '') {
 3. Verify information when possible
 4. Respond with key findings only
 
-Research creatively using the 5 unified tools available:
+Research creatively using the 6 unified tools available:
 
 **🔍 SEARCH TOOL** - Universal search with topic selection:
 • search(query, "web") - General web search for facts, verification
@@ -273,6 +295,11 @@ Research creatively using the 5 unified tools available:
 **📊 ANALYZE TOOL** - Content processing:
 • analyze(text, "summarize", {maxPoints: 5}) - Text summarization
 • analyze(dataArray, "data", {operation: "count", field: "subreddit"}) - Data insights
+
+**🌐 FETCH_URL TOOL** - Direct web page content access:
+• fetch_url("https://example.com", "summarize the article") - Fetch and analyze web pages
+• fetch_url("https://docs.site.com", "extract API documentation") - Read documentation
+• fetch_url("https://news.com/article", "find key facts") - Extract specific information
 
 🔬 **CREATIVE RESEARCH PATTERNS** - Don't just follow these, INVENT new combinations:
 
@@ -386,7 +413,7 @@ export function isValidPersonality(personality) {
  * Optimized for Lambda execution limits
  */
 export const TOOL_USAGE_CONFIG = {
-  MAX_LOOPS: 10,  // OpenAI API calls are fast, no need to reduce
+  MAX_LOOPS: 20,  // Increased for more complex research workflows
   MAX_TOOL_USAGE: 10,  // Increased tool usage limit for more complex queries
   DEFAULT_TOOL_COUNTS: {
     'search': 0,
@@ -394,6 +421,7 @@ export const TOOL_USAGE_CONFIG = {
     'images': 0,
     'calculate': 0,
     'analyze': 0,
+    'fetch_url': 0,
     'send_messages': 0
   },
   // Lambda-specific timeouts for individual tool operations

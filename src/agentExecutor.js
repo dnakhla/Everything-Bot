@@ -12,7 +12,8 @@ import {
   messages,
   images,
   calculate,
-  analyze
+  analyze,
+  fetch_url
 } from '../tools/agentToolkit.js';
 import { TOOL_USAGE_CONFIG } from './agentConfig.js';
 
@@ -48,6 +49,9 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
           
         case 'analyze':
           return await executeAnalyzeTool(functionArgs);
+          
+        case 'fetch_url':
+          return await executeFetchUrlTool(functionArgs);
           
         case 'send_messages':
           return await executeSendMessagesTool(functionArgs, chatId);
@@ -122,6 +126,18 @@ async function executeAnalyzeTool(args) {
   Logger.log(`Analyze: action "${action}" with options:`, options);
   
   const result = await analyze(content, action, options);
+  return result;
+}
+
+/**
+ * Execute fetch_url tool using agentToolkit
+ */
+async function executeFetchUrlTool(args) {
+  const { url, instruction = 'summarize the main content' } = args;
+  
+  Logger.log(`Fetch URL: "${url}" with instruction: "${instruction}"`);
+  
+  const result = await fetch_url(url, instruction);
   return result;
 }
 
@@ -244,6 +260,10 @@ export function getToolExecutionDescription(functionName, functionArgs) {
       return analyzeAction === 'summarize' ? 
         'Summarizing content' : 
         'Analyzing data';
+        
+    case 'fetch_url':
+      const { url } = functionArgs;
+      return `Fetching content from: ${url}`;
         
     case 'send_messages':
       return `Sending ${functionArgs.messages?.length || 1} chat messages`;
