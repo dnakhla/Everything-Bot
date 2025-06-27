@@ -15,7 +15,9 @@
     "lint": "eslint .",
     "test:syntax": "find . -name '*.js' -not -path '*/node_modules/*' -not -path '*/tests/*' -exec node --check {} \\; && echo 'All files are syntactically valid'",
     "list-conversations": "node scripts/listConversationsContent.js",
-    "delete-conversations": "source .env && aws s3 rm s3://${S3_BUCKET_NAME}/fact_checker_bot/groups/ --recursive"
+    "delete-conversations": "source .env && aws s3 rm s3://${S3_BUCKET_NAME}/fact_checker_bot/groups/ --recursive",
+    "log-viewer": "node scripts/logViewer.js",
+    "chat-explorer": "node scripts/chatExplorer.js"
   },
   "keywords": [
     "telegram",
@@ -30,7 +32,9 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.200.0",
     "axios": "^1.4.0",
+    "chalk": "^5.4.1",
     "dotenv": "^16.0.3",
+    "fluent-ffmpeg": "^2.1.2",
     "mathjs": "^12.2.1",
     "moment": "^2.29.4",
     "node-telegram-bot-api": "^0.61.0",

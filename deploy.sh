@@ -141,7 +141,9 @@ if [ "$DO_CREATE" = true ]; then
         --role "$ROLE_ARN" \
         --handler index.handler \
         --zip-file "fileb://$ZIP_FILE_NAME" \
+        --layers "arn:aws:lambda:us-east-1:734788133199:layer:ffmpeg:1" \
         --environment "Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPER_API_KEY=${SERPER_API_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-}}" \
+        --memory-size 512 \
         --region "$AWS_REGION"
     if [ $? -eq 0 ]; then
         echo -e "${GREEN}Lambda function created successfully!${NC}"
@@ -208,11 +210,13 @@ if [ "$DO_DEPLOY" = true ]; then
         --zip-file "fileb://$ZIP_FILE_NAME" \
         --region "$AWS_REGION"
     
-    # Update timeout to 5 minutes (300 seconds)
-    echo -e "Updating Lambda timeout to 5 minutes..."
+    # Update timeout to 5 minutes (300 seconds) and memory to 512MB
+    echo -e "Updating Lambda configuration..."
     aws lambda update-function-configuration \
         --function-name "$LAMBDA_FUNCTION_NAME" \
         --timeout 300 \
+        --memory-size 512 \
+        --layers "arn:aws:lambda:us-east-1:734788133199:layer:ffmpeg:1" \
         --region "$AWS_REGION"
 
     if [ $? -eq 0 ]; then
