@@ -88,6 +88,48 @@ This multi-step, adaptive approach allows for highly accurate and nuanced answer
 - **GIFs & Videos:** Frame-by-frame analysis available
 - **Documents & Links:** Content extracted and summarized
 
+## 🏗 Architecture & Technical Documentation
+
+### System Architecture Diagrams
+For detailed technical documentation and architecture diagrams, see the [`docs/`](docs/) directory:
+
+- **[Complete Architecture Overview](docs/architecture.md)** - Mermaid diagrams showing system overview, agent interactions, and data flow
+- **[System Architecture](docs/system-architecture.puml)** - PlantUML diagram with AWS infrastructure components  
+- **[Agent Interaction Sequence](docs/agent-sequence.puml)** - Detailed multi-agent coordination flow
+- **[Agent Decision Tree](docs/agent-decision-tree.puml)** - Agent selection and routing logic
+
+### Multi-Agent System Overview
+Everything Bot uses a sophisticated multi-agent architecture where specialized AI agents collaborate to handle different types of input:
+
+```mermaid
+graph TB
+    subgraph "Agent Orchestration"
+        AR[Agent Router]
+        PM[Persona Manager] 
+        CM[Context Manager]
+        MM[Memory Manager]
+    end
+    
+    subgraph "Specialized Agents"
+        TA[Transcription Agent]
+        VA[Video Analysis Agent]
+        SA[Search Agent]
+        FA[Fact-Check Agent]
+        PA[Personality Agent]
+        MA[Memory Agent]
+    end
+    
+    AR --> PM
+    AR --> CM
+    AR --> MM
+    CM --> TA
+    CM --> VA
+    CM --> SA
+    CM --> FA
+    PM --> PA
+    MM --> MA
+```
+
 ## ⚙️ Deployment Guide
 
 This bot is designed for serverless deployment on AWS Lambda.

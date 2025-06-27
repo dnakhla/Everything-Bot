@@ -1,0 +1,154 @@
+@startuml EverythingBot_Architecture
+!theme aws-orange
+title Everything Bot - Agentic AI System Architecture
+
+!define AWSPUML https://raw.githubusercontent.com/awslabs/aws-icons-for-plantuml/v15.0/dist
+!includeurl AWSPUML/AWSCommon.puml
+!includeurl AWSPUML/ApplicationIntegration/APIGateway.puml
+!includeurl AWSPUML/Compute/Lambda.puml
+!includeurl AWSPUML/Storage/S3.puml
+
+skinparam backgroundColor #FFFFFF
+skinparam componentStyle rectangle
+
+package "User Interface Layer" {
+  [Telegram Groups] as TG
+  [Voice Messages] as VM
+  [Images/Videos] as IV
+  [Text Messages] as TM
+}
+
+package "Agent Orchestration Core" {
+  [Agent Router] as AR #lightblue
+  [Persona Manager] as PM #lightgreen
+  [Context Manager] as CM #lightyellow
+  [Memory Manager] as MM #lightpink
+}
+
+package "Specialized AI Agents" {
+  [Transcription Agent] as TA #orange
+  [Video Analysis Agent] as VA #purple
+  [Search Agent] as SA #blue
+  [Fact-Check Agent] as FA #red
+  [Personality Agent] as PA #green
+  [Memory Retrieval Agent] as MRA #pink
+}
+
+package "External AI Services" {
+  [OpenAI GPT-4] as GPT4
+  [Whisper API] as WHISPER
+  [Vision API] as VISION
+}
+
+package "Search & Data APIs" {
+  [Serper API] as SERPER
+  [Brave Search] as BRAVE
+  [Reddit API] as REDDIT
+}
+
+package "Media Processing" {
+  [FFmpeg Layer] as FFMPEG
+  [Frame Extraction] as FE
+  [Audio Processing] as AP
+}
+
+package "AWS Infrastructure" as AWS {
+  Lambda(LAMBDA, "Lambda Functions", "Serverless Compute")
+  S3(S3BUCKET, "S3 Storage", "Conversation Data")
+  APIGateway(APIGW, "API Gateway", "Webhook Handler")
+}
+
+package "Data Storage" {
+  [Conversation History] as CH
+  [User Preferences] as UP
+  [Agent Memory] as AM
+  [Message Metadata] as MD
+}
+
+' User interactions
+TG --> TM
+TG --> VM
+TG --> IV
+
+' Core routing
+TM --> AR
+VM --> AR
+IV --> AR
+
+' Agent orchestration
+AR --> PM
+AR --> CM
+AR --> MM
+
+' Specialized agent activation
+PM --> PA
+CM --> TA
+CM --> VA
+CM --> SA
+CM --> FA
+MM --> MRA
+
+' External service connections
+TA --> WHISPER
+TA --> GPT4
+VA --> FFMPEG
+VA --> VISION
+SA --> SERPER
+SA --> BRAVE
+SA --> REDDIT
+FA --> GPT4
+PA --> GPT4
+MRA --> S3BUCKET
+
+' Media processing flow
+VM --> AP
+IV --> FE
+AP --> TA
+FE --> VA
+
+' Data persistence
+CM --> CH
+PM --> UP
+MM --> AM
+AR --> MD
+
+' Infrastructure connections
+AR --> LAMBDA
+LAMBDA --> S3BUCKET
+APIGW --> LAMBDA
+TG --> APIGW
+
+' Memory feedback loops
+CH --> CM
+UP --> PM
+AM --> MM
+MD --> AR
+
+note right of AR
+  Routes messages to appropriate
+  agents based on content type,
+  persona prefix, and context
+end note
+
+note right of PM
+  Manages personality switching:
+  - fact-bot, skeptic-bot
+  - optimist-bot, conspiracy-bot
+  - bro-bot, memory-bot
+end note
+
+note right of CM
+  Maintains conversation context:
+  - Multi-turn dialogues
+  - Group chat awareness
+  - Cross-session memory
+end note
+
+note right of MM
+  Long-term memory management:
+  - Stores conversation history
+  - Learns user preferences
+  - Maintains group dynamics
+end note
+
+@enduml
