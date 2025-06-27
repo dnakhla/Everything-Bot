@@ -1,8 +1,8 @@
-# 🤖 Telegram Fact-Checker Bot
+# 🤖 FactChecker Bot
 
-**Empowering your group chats with real-time, AI-powered fact-checking and intelligent analysis.**
+**The ONLY Telegram Bot That Actually Transcribes Audio, Analyzes Media, Searches the Web & Remembers Everything!**
 
-This Telegram bot transforms group discussions by providing instant, accurate information and diverse perspectives. Built as an advanced, multi-tool AI agent, it leverages cutting-edge models and a suite of specialized tools to ensure your conversations are grounded in facts.
+This advanced Telegram bot transforms group discussions by providing instant transcription, media analysis, web research, and persistent memory. Built as a sophisticated AI agent, it leverages cutting-edge models and specialized tools to enhance your conversations with intelligent insights.
 
 --- 
 
@@ -26,33 +26,33 @@ More than just a chatbot, this bot operates as a sophisticated AI agent capable 
 
 This multi-step, adaptive approach allows for highly accurate and nuanced answers, far surpassing the capabilities of traditional single-prompt AI systems.
 
-## 🌟 Key Features
+## 🌟 Core Capabilities
 
-### 🔍 **Advanced Fact-Checking & Research**
+### 🎤 **Audio Transcription**
+*   **Perfect Voice Transcription:** Converts any voice message to accurate text
+*   **Multi-language Support:** Handles various languages and accents
+*   **Instant Processing:** Fast, reliable transcription in group chats
 
-The bot employs a comprehensive suite of tools to ensure information accuracy and provide well-rounded insights:
+### 📸 **Media Analysis**
+*   **Image Recognition:** Analyzes photos and describes what it sees
+*   **Video Frame Extraction:** Processes GIFs and videos frame-by-frame
+*   **Visual Understanding:** Reads text in images, identifies objects and scenes
 
-*   **General Web Search:** For broad factual queries and up-to-date information.
-*   **Current News Search:** Access to the latest headlines and breaking news from reputable sources.
-*   **Reddit Discussions:** Explore public opinion, community sentiment, and user experiences.
-*   **Alternative Sources:** Discover diverse perspectives from independent blogs, Substack, Medium, and more.
-*   **URL Content Fetching:** Directly read and analyze content from any specified webpage.
+### 🔍 **Web Research & Fact-Checking**
+*   **Real-time Web Search:** Access to current information and breaking news
+*   **Reddit Discussions:** Explore public opinion and community sentiment
+*   **URL Content Analysis:** Directly read and analyze any webpage
+*   **Multi-source Verification:** Cross-reference information from multiple sources
 
-### 📊 **AI-Powered Analysis & Personalization**
+### 💾 **Persistent Memory**
+*   **Conversation History:** Stores and recalls chat context across days and weeks
+*   **Smart Summarization:** "robot summarize our chat" provides intelligent conversation summaries
+*   **Context Awareness:** Remembers previous discussions and maintains continuity
 
-Leveraging powerful AI models, the bot can do more than just search:
-
-*   **Content Summarization:** Condense lengthy articles or research findings into key bullet points.
-*   **Data Manipulation:** Filter, sort, and analyze structured data to extract specific insights.
-*   **Personality Adoption:** Engage with the bot from different viewpoints (e.g., `skeptic-bot, is the earth flat?` or `optimist-bot, what's the future of AI?`).
-
-### 🛠️ **Specialized Utility Tools**
-
-Beyond information retrieval, the bot offers practical utilities:
-
-*   **Math Calculations:** Solve complex mathematical expressions instantly.
-*   **Image & Video Search:** Find relevant visual and multimedia content.
-*   **Accommodation & Places Search:** Look up locations, businesses, and booking information.
+### 🎭 **Personality Modes**
+*   **Dynamic Personas:** Switch between different response styles (skeptic-bot, optimist-bot, etc.)
+*   **Adaptive Responses:** Tailors communication style to match the requested persona
+*   **Context-Aware Personalities:** Maintains personality traits throughout conversations
 
 ### 💬 **Seamless Telegram Integration**
 
@@ -63,16 +63,30 @@ Beyond information retrieval, the bot offers practical utilities:
 
 ![Demo of Telegram Fact-Checker Bot](assets/demo.png)
 
-## 🚀 Available Commands
+## 🚀 How to Use
 
-*   `robot, [your question]` or `robot [your question]`
-    *   Ask the bot any direct question. The bot will use its tools to find the best answer.
-*   `[personality]-bot, [your question]`
-    *   Engage the bot with a specific persona. Examples: `optimist-bot, what's the future of AI?`, `skeptic-bot, tell me about climate change.`, `bro-bot, what's up?`
-*   `/clearmessages`
-    *   Clears all stored message history for the current chat from S3 and attempts to delete recent bot messages from the Telegram interface.
-*   `/cancel`
-    *   Requests the bot to stop its current operation. Useful if the bot is taking too long or you want to interrupt its process.
+### Basic Commands
+*   `robot transcribe this audio` - Add with any voice message for instant transcription
+*   `robot what do you see?` - Add with any image for detailed analysis
+*   `robot summarize our chat` - Get an intelligent summary of recent conversations
+*   `robot search [topic]` - Research any topic with web search and fact-checking
+*   `memory-bot remember this` - Store important information for future reference
+
+### Personality Modes
+*   `fact-bot search climate data` - Research mode for detailed information gathering
+*   `skeptic-bot analyze this claim` - Critical analysis perspective
+*   `optimist-bot what's the future of AI?` - Positive, forward-looking responses
+*   `conspiracy-bot [question]` - Alternative perspective analysis
+
+### Management Commands
+*   `/clearmessages` - Clear stored conversation history and recent bot messages
+*   `/cancel` - Stop current bot operation if taking too long
+
+### Media Support
+- **Voice Messages:** Automatically transcribed when you mention "robot"
+- **Images & Photos:** Analyzed and described in detail
+- **GIFs & Videos:** Frame-by-frame analysis available
+- **Documents & Links:** Content extracted and summarized
 
 ## ⚙️ Deployment Guide
 

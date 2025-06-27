@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { Logger } from '../utils/logger.js';
 import { CONFIG } from '../config.js';
 import { streamToString } from '../utils/utils.js';
@@ -30,6 +30,20 @@ const S3Manager = {
     } catch (error) {
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) return null;
       Logger.log(`Error getting from S3: ${error.message}`, 'error');
+      throw error;
+    }
+  },
+
+  listObjectsByPrefix: async (bucket, prefix) => {
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+      });
+      const response = await s3.send(command);
+      return response.Contents || [];
+    } catch (error) {
+      Logger.log(`Error listing objects from S3: ${error.message}`, 'error');
       throw error;
     }
   },

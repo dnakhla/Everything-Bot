@@ -1,15 +1,7 @@
 import { Logger } from './utils/logger.js';
 import { CONFIG } from './config.js';
-import { handleMessage } from './src/commandHandlers.js';
-
-/**
- * AWS Lambda handler function for processing Telegram bot webhook events
- * 
- * @param {object} event - The Lambda event object
- * @returns {object} - The Lambda response object
- */
-// Simple in-memory cache for processed messages (resets on cold start)
-const processedMessages = new Set();
+import { handleMessage, handleBotAddedToChat } from './src/commandHandlers.js';
+import { isMessageProcessed, markMessageAsProcessed } from './services/messageService.js';
 
 export const handler = async (event) => {
   try {
@@ -23,27 +15,30 @@ export const handler = async (event) => {
       return createResponse(200, { status: 'No action taken' });
     }
 
+    // Check if bot was added to a new chat
+    if (body.message.new_chat_members) {
+      const botUser = body.message.new_chat_members.find(member => member.is_bot && member.username);
+      if (botUser) {
+        Logger.log(`Bot added to new chat: ${body.message.chat.id}`);
+        await handleBotAddedToChat(body.message.chat.id, body.message.chat);
+        return createResponse(200, { status: 'Bot introduction sent' });
+      }
+    }
+
     const chatId = body.message.chat.id;
     const text = body.message.text || '';
     const messageId = body.message.message_id;
     
     Logger.log(`Received message from chat ID ${chatId}: ${text} (message_id: ${messageId})`);
 
-    // Check for duplicate message processing
-    const messageKey = `${chatId}:${messageId}`;
-    if (processedMessages.has(messageKey)) {
-      Logger.log(`Duplicate message detected: ${messageKey}, skipping processing`);
+    // Check for duplicate message processing using persistent storage
+    if (await isMessageProcessed(chatId, messageId)) {
+      Logger.log(`Duplicate message detected: ${chatId}:${messageId}, skipping processing`);
       return createResponse(200, { status: 'Duplicate message ignored' });
     }
     
-    // Mark message as being processed
-    processedMessages.add(messageKey);
-    
-    // Clean up old entries (keep only last 100 to prevent memory leaks)
-    if (processedMessages.size > 100) {
-      const entries = Array.from(processedMessages);
-      entries.slice(0, 50).forEach(entry => processedMessages.delete(entry));
-    }
+    // Mark message as being processed persistently
+    await markMessageAsProcessed(chatId, messageId);
 
     // Trim message object to only essential fields
     const trimmedMessage = trimMessageObject(body.message);
@@ -77,7 +72,7 @@ function parseRequestBody(event) {
  * @returns {object} - The trimmed message object
  */
 function trimMessageObject(message) {
-  return {
+  const trimmed = {
     message_id: message.message_id,
     from: {
       id: message.from?.id,
@@ -90,8 +85,21 @@ function trimMessageObject(message) {
       type: message.chat?.type
     },
     date: message.date,
-    text: message.text
+    text: message.text,
+    caption: message.caption
   };
+
+  // Preserve file attachments
+  if (message.photo) trimmed.photo = message.photo;
+  if (message.document) trimmed.document = message.document;
+  if (message.audio) trimmed.audio = message.audio;
+  if (message.voice) trimmed.voice = message.voice;
+  if (message.video) trimmed.video = message.video;
+  if (message.video_note) trimmed.video_note = message.video_note;
+  if (message.sticker) trimmed.sticker = message.sticker;
+  if (message.animation) trimmed.animation = message.animation;
+
+  return trimmed;
 }
 
 /**

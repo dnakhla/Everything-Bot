@@ -78,4 +78,24 @@ export const TelegramAPI = {
       return null;
     }
   },
+
+  /**
+   * Get file information from Telegram
+   * 
+   * @param {string} fileId - The file ID from Telegram
+   * @returns {Promise<object>} - Promise that resolves with file info
+   */
+  getFile: async (fileId) => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/getFile`;
+    try {
+      const response = await axios.post(url, {
+        file_id: fileId
+      });
+      Logger.log(`Got file info for file ID: ${fileId}`);
+      return response.data.result;
+    } catch (error) {
+      Logger.log(`Failed to get file info: ${error.message}`, 'error');
+      throw error;
+    }
+  },
 };
