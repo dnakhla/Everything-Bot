@@ -32,7 +32,7 @@ export function createToolWrapper(serviceFunction, options = {}) {
       const params = { ...defaultParams, ...args };
       
       // Log the tool usage
-      Logger.log(`Tool ${name} called with params:`, params);
+      Logger.log(`Tool ${name} called with params: ${JSON.stringify(params)}`);
       
       // Validate parameters if validator provided
       if (validateParams && !validateParams(...args)) {

@@ -48,6 +48,23 @@ const S3Manager = {
     }
   },
 
+  uploadBuffer: async (bucket, key, buffer, contentType = 'application/octet-stream') => {
+    try {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: contentType,
+        })
+      );
+      Logger.log(`Successfully uploaded buffer to S3: ${key}`);
+    } catch (error) {
+      Logger.log(`Failed to upload buffer to S3: ${error.message}`, 'error');
+      throw error;
+    }
+  },
+
   deleteObject: async (bucket, key) => {
     try {
       await s3.send(new DeleteObjectCommand({

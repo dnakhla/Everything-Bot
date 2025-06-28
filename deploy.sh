@@ -181,6 +181,32 @@ cd ..
 echo -e "${YELLOW}Creating deployment package...${NC}"
 rm -f "$ZIP_FILE_NAME"
 cd $DEPLOY_DIR || exit 1 # Exit if cd fails
+
+# Optimize for AWS Lambda: keep browser dependencies but remove unnecessary files
+echo -e "${YELLOW}Optimizing package size for AWS Lambda (keeping browser dependencies)...${NC}"
+# Remove unnecessary files from all packages to reduce size
+find . -name "*.md" -not -path "./README.md" -delete 2>/dev/null || true
+find . -name "*.txt" -delete 2>/dev/null || true
+find . -name "LICENSE*" -delete 2>/dev/null || true
+find . -name "CHANGELOG*" -delete 2>/dev/null || true
+find . -name "HISTORY*" -delete 2>/dev/null || true
+find . -name "test*" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "tests*" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "doc*" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "docs*" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "example*" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "examples*" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "*.d.ts" -delete 2>/dev/null || true
+find . -name "*.map" -delete 2>/dev/null || true
+
+# Remove specific large unnecessary files from node_modules
+rm -rf node_modules/*/test/ 2>/dev/null || true
+rm -rf node_modules/*/tests/ 2>/dev/null || true
+rm -rf node_modules/*/doc/ 2>/dev/null || true
+rm -rf node_modules/*/docs/ 2>/dev/null || true
+rm -rf node_modules/*/example/ 2>/dev/null || true
+rm -rf node_modules/*/examples/ 2>/dev/null || true
+
 zip -r "../$ZIP_FILE_NAME" . > /dev/null # Suppress zip output
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to create zip package.${NC}"
@@ -207,10 +233,39 @@ if [ "$DO_DEPLOY" = true ]; then
     fi
 
     echo -e "Deploying to AWS Lambda function: ${GREEN}$LAMBDA_FUNCTION_NAME${NC} in region ${GREEN}$AWS_REGION${NC}..."
-    aws lambda update-function-code \
-        --function-name "$LAMBDA_FUNCTION_NAME" \
-        --zip-file "fileb://$ZIP_FILE_NAME" \
-        --region "$AWS_REGION"
+    
+    # Check package size - if > 50MB, use S3 upload
+    PACKAGE_SIZE=$(stat -f%z "$ZIP_FILE_NAME" 2>/dev/null || stat -c%s "$ZIP_FILE_NAME" 2>/dev/null)
+    MAX_DIRECT_SIZE=50000000  # 50MB
+    
+    if [ "$PACKAGE_SIZE" -gt "$MAX_DIRECT_SIZE" ]; then
+        echo -e "${YELLOW}Package size ($(($PACKAGE_SIZE / 1024 / 1024))MB) exceeds 50MB limit. Using S3 upload...${NC}"
+        
+        # Upload to S3 first
+        S3_BUCKET="telegram-bots-2025"  # Use your existing S3 bucket
+        S3_KEY="lambda-deployments/$LAMBDA_FUNCTION_NAME-$(date +%Y%m%d-%H%M%S).zip"
+        
+        echo -e "Uploading to S3: s3://$S3_BUCKET/$S3_KEY"
+        aws s3 cp "$ZIP_FILE_NAME" "s3://$S3_BUCKET/$S3_KEY" --region "$AWS_REGION"
+        
+        if [ $? -eq 0 ]; then
+            echo -e "Deploying from S3..."
+            aws lambda update-function-code \
+                --function-name "$LAMBDA_FUNCTION_NAME" \
+                --s3-bucket "$S3_BUCKET" \
+                --s3-key "$S3_KEY" \
+                --region "$AWS_REGION"
+        else
+            echo -e "${RED}Failed to upload to S3.${NC}"
+            exit 1
+        fi
+    else
+        echo -e "Using direct file upload (package < 50MB)..."
+        aws lambda update-function-code \
+            --function-name "$LAMBDA_FUNCTION_NAME" \
+            --zip-file "fileb://$ZIP_FILE_NAME" \
+            --region "$AWS_REGION"
+    fi
     
     # Update timeout to 5 minutes (300 seconds) and memory to 512MB
     echo -e "Updating Lambda configuration..."

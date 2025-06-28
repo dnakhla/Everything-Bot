@@ -33,10 +33,7 @@ export async function fetchUrlContent(url) {
         .trim();
     }
         
-    // Limit content length
-    if (content.length > 5000) {
-      content = content.substring(0, 5000) + '... [truncated]';
-    }
+    // No content length limit - allow full page content for comprehensive analysis
         
     Logger.log(`Successfully fetched content from URL: ${url} (${content.length} chars)`);
     return content;

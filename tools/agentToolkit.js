@@ -12,6 +12,8 @@ import * as MathCalculation from './mathCalculation.js';
 import * as ContentAnalysis from './contentAnalysis.js';
 import * as DataProcessing from './dataProcessing.js';
 import * as MessageService from '../services/messageService.js';
+import { browser, BROWSER_TOOLKIT } from './browserTool.js';
+import { analyzeImage, extractTextFromImage, analyzeImageContent, IMAGE_ANALYSIS_TOOLKIT } from './imageAnalysis.js';
 import { createToolWrapper } from '../utils/toolWrapper.js';
 
 /**
@@ -201,6 +203,15 @@ export const analyze = createToolWrapper(
 );
 
 /**
+ * Browser automation for JavaScript-heavy sites and dynamic content
+ * @param {string} url - URL to navigate to
+ * @param {string} action - Action: 'scrape', 'screenshot', 'interact', 'wait-and-scrape', 'spa-scrape', 'links'
+ * @param {Object} options - Action-specific options
+ * @returns {Promise<string>} Browser automation results
+ */
+export { browser };
+
+/**
  * Fetch and analyze content from a URL
  * @param {string} url - URL to fetch
  * @param {string} instruction - What to analyze in the content
@@ -209,55 +220,121 @@ export const analyze = createToolWrapper(
 export const fetch_url = createToolWrapper(
   async (url, instruction = 'summarize the main content') => {
     try {
-      // Import axios for HTTP requests
-      const axios = (await import('axios')).default;
-      
       // Validate URL
       const urlPattern = /^https?:\/\//i;
       if (!urlPattern.test(url)) {
         throw new Error('Invalid URL format. Must start with http:// or https://');
       }
       
-      // Fetch the webpage content
-      const response = await axios.get(url, {
-        timeout: 30000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; FactCheckerBot/1.0)'
-        },
-        maxContentLength: 500000, // 500KB limit
-        maxBodyLength: 500000
-      });
-      
-      let content = response.data;
-      
-      // Basic HTML cleanup if content is HTML
-      if (response.headers['content-type']?.includes('text/html')) {
-        // Remove script and style tags
-        content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-        content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-        // Remove HTML tags and decode entities
-        content = content.replace(/<[^>]*>/g, ' ');
-        content = content.replace(/&nbsp;/g, ' ');
-        content = content.replace(/&amp;/g, '&');
-        content = content.replace(/&lt;/g, '<');
-        content = content.replace(/&gt;/g, '>');
-        content = content.replace(/&quot;/g, '"');
-        // Clean up whitespace
-        content = content.replace(/\s+/g, ' ').trim();
+      // Try intelligent fetch with API discovery first
+      try {
+        const { intelligentFetch } = await import('../services/apiDiscovery.js');
+        const fetchResult = await intelligentFetch(url, instruction);
+        
+        Logger.log(`Intelligent fetch result: ${fetchResult.type} (${fetchResult.content.length} chars)`);
+        
+        let content = fetchResult.content;
+        let links = [];
+        
+        // Extract links if we have HTML content
+        if (fetchResult.type === 'html' || fetchResult.type === 'html_fallback') {
+          links = extractLinks(content, url);
+          
+          // Clean HTML content
+          if (content.includes('<html')) {
+            content = content
+              .replace(/<script[^>]*>.*?<\/script>/gis, '')
+              .replace(/<style[^>]*>.*?<\/style>/gis, '')
+              .replace(/<[^>]*>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+          
+          // Basic entity decoding
+          if (content.includes('&')) {
+            content = content.replace(/&nbsp;/g, ' ');
+            content = content.replace(/&amp;/g, '&');
+            content = content.replace(/&lt;/g, '<');
+            content = content.replace(/&gt;/g, '>');
+            content = content.replace(/&quot;/g, '"');
+            content = content.replace(/\s+/g, ' ').trim();
+          }
+        } else if (fetchResult.type === 'api_data' || fetchResult.type === 'js_data') {
+          // For API/JS data, try to extract any URLs from the JSON
+          links = extractLinksFromJson(content, url);
+        }
+        
+        if (!content || content.length < 50) {
+          return '❌ No meaningful content found on the page';
+        }
+        
+        // Use the analyze tool to process the content according to instruction
+        const analyzedResult = await ContentAnalysis.summarizeContent(content, 8, instruction);
+        
+        const sourceInfo = fetchResult.type === 'api_data' ? '🔗 API Data' : 
+                          fetchResult.type === 'js_data' ? '⚡ JavaScript Data' : '📄 Web Content';
+        
+        let result = `${sourceInfo} from ${url}:\n\n${analyzedResult}`;
+        
+        // Add relevant links if found
+        if (links.length > 0) {
+          const relevantLinks = filterRelevantLinks(links, instruction);
+          if (relevantLinks.length > 0) {
+            result += `\n\n🔗 **Related Links Found:**\n${relevantLinks.slice(0, 5).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
+          }
+        }
+        
+        return result;
+        
+      } catch (intelligentError) {
+        Logger.log(`Intelligent fetch failed, falling back to simple fetch: ${intelligentError.message}`, 'warn');
+        
+        // Fallback to original method with link extraction
+        const axios = (await import('axios')).default;
+        
+        const response = await axios.get(url, {
+          timeout: 30000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; FactCheckerBot/1.0)'
+          },
+          maxContentLength: 1024 * 1024, // 1MB limit (no truncation)
+          maxBodyLength: 1024 * 1024
+        });
+        
+        let content = response.data;
+        let links = [];
+        
+        // Extract links before cleaning HTML
+        if (response.headers['content-type']?.includes('text/html')) {
+          links = extractLinks(content, url);
+          
+          // Basic HTML cleanup
+          content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+          content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+          content = content.replace(/<[^>]*>/g, ' ');
+          content = content.replace(/&nbsp;/g, ' ');
+          content = content.replace(/&amp;/g, '&');
+          content = content.replace(/&lt;/g, '<');
+          content = content.replace(/&gt;/g, '>');
+          content = content.replace(/&quot;/g, '"');
+          content = content.replace(/\s+/g, ' ').trim();
+        }
+        
+        // Use the analyze tool to process the content according to instruction
+        const analyzedResult = await ContentAnalysis.summarizeContent(content, 8, instruction);
+        
+        let result = `📄 Content from ${url}:\n\n${analyzedResult}`;
+        
+        // Add relevant links if found
+        if (links.length > 0) {
+          const relevantLinks = filterRelevantLinks(links, instruction);
+          if (relevantLinks.length > 0) {
+            result += `\n\n🔗 **Related Links Found:**\n${relevantLinks.slice(0, 5).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
+          }
+        }
+        
+        return result;
       }
-      
-      // Truncate if too long
-      if (content.length > 10000) {
-        content = content.substring(0, 10000) + '... [truncated]';
-      }
-      
-      // Use the analyze tool to process the content according to instruction
-      const analyzedResult = await ContentAnalysis.summarizeContent(content, { 
-        instruction: instruction,
-        maxPoints: 8 
-      });
-      
-      return `📄 Content from ${url}:\n\n${analyzedResult}`;
       
     } catch (error) {
       if (error.code === 'ENOTFOUND') {
@@ -368,12 +445,19 @@ function formatTranscriptResults(messages, timeframe) {
 export const AGENT_TOOLKIT = {
   search: {
     name: 'search',
-    description: 'Universal search: search(query, topic, options)',
+    description: 'Universal search with ADVANCED QUERY TECHNIQUES - Always use quotes, boolean operators, and specific terms',
     examples: [
-      'search("climate change", "news")',
-      'search("pizza", "places")', 
-      'search("cats", "images")',
-      'search("AI", "reddit", {subreddit: "technology"})'
+      'search(\'"climate change" impacts 2024 AND policy\', "news")',
+      'search(\'"telegram bot" development tutorial OR guide\', "web")', 
+      'search(\'"AI safety" research -hype -marketing\', "alternative")',
+      'search(\'"machine learning" applications "December 2024"\', "reddit", {subreddit: "technology"})'
+    ],
+    advanced_techniques: [
+      'QUOTED PHRASES: "exact phrase" for precision',
+      'BOOLEAN OPERATORS: AND, OR, - for complex queries', 
+      'TIME SPECIFIC: Add dates, "2024", "recent", "latest"',
+      'EXCLUSIONS: Use -unwanted -terms to filter noise',
+      'MULTI-ANGLE: Same topic across different source types'
     ],
     topics: ['web', 'news', 'images', 'videos', 'places', 'reddit', 'alternative']
   },
@@ -419,8 +503,168 @@ export const AGENT_TOOLKIT = {
       'analyze(dataArray, "data", {operation: "count"})'
     ],
     actions: ['summarize', 'data']
+  },
+  
+  browser: {
+    name: 'browser',
+    description: 'Browser automation for JavaScript-heavy sites, SPAs, and dynamic content: browser(url, action, options)',
+    examples: [
+      'browser("https://spa-site.com", "scrape", {waitFor: 5000, scrollDown: true})',
+      'browser("https://js-heavy.com", "spa-scrape", {instruction: "find pricing"})',
+      'browser("https://dynamic.com", "wait-and-scrape", {selector: ".content"})',
+      'browser("https://site.com", "links", {instruction: "documentation"})',
+      'browser("https://site.com", "screenshot", {fullPageScreenshot: true, instruction: "describe the layout"})'
+    ],
+    actions: ['scrape', 'screenshot', 'interact', 'wait-and-scrape', 'spa-scrape', 'links'],
+    use_cases: [
+      'Sites that require JavaScript to render content',
+      'Single Page Applications (React, Vue, Angular)',
+      'Dynamic content that loads after page load',
+      'Sites requiring interaction or scrolling',
+      'Complex web apps with client-side routing',
+      'Screenshots with AI analysis for visual inspection'
+    ]
+  },
+  
+  analyze_image: {
+    name: 'analyze_image',
+    description: 'AI-powered image analysis using GPT-4.1-mini vision model: analyze_image(imageData, instruction, chatId)',
+    examples: [
+      'analyze_image(imageBuffer, "describe what you see", chatId)',
+      'analyze_image(base64Image, "extract all text from this receipt", chatId)',
+      'analyze_image(imageData, "identify the brand and model", chatId)',
+      'analyze_image(screenshotData, "explain this error message", chatId)'
+    ],
+    use_cases: [
+      'Analyzing uploaded images from chat',
+      'OCR text extraction from photos',
+      'Receipt and document analysis',
+      'Screenshot troubleshooting',
+      'Product identification and analysis',
+      'Chart and diagram interpretation'
+    ]
   }
 };
+
+/**
+ * Extract links from HTML content
+ * @param {string} html - HTML content
+ * @param {string} baseUrl - Base URL for resolving relative links
+ * @returns {Array} Array of link objects with url and text
+ */
+function extractLinks(html, baseUrl) {
+  const links = [];
+  const baseUrlObj = new URL(baseUrl);
+  
+  // Extract all <a> tags with href attributes
+  const linkPattern = /<a[^>]+href=["']([^"']+)["'][^>]*>(.*?)<\/a>/gis;
+  let match;
+  
+  while ((match = linkPattern.exec(html)) !== null) {
+    let url = match[1];
+    let text = match[2].replace(/<[^>]*>/g, '').trim(); // Remove HTML tags from link text
+    
+    // Skip if no meaningful text
+    if (!text || text.length < 2) continue;
+    
+    // Resolve relative URLs
+    try {
+      if (url.startsWith('/')) {
+        url = baseUrlObj.origin + url;
+      } else if (url.startsWith('./') || url.startsWith('../')) {
+        url = new URL(url, baseUrl).href;
+      } else if (!url.startsWith('http')) {
+        url = new URL(url, baseUrl).href;
+      }
+      
+      // Skip non-web protocols
+      if (!url.startsWith('http')) continue;
+      
+      links.push({ url, text: text.substring(0, 100) }); // Limit text length
+    } catch (e) {
+      // Invalid URL, skip
+      continue;
+    }
+  }
+  
+  // Remove duplicates
+  const uniqueLinks = links.filter((link, index, self) => 
+    index === self.findIndex(l => l.url === link.url)
+  );
+  
+  return uniqueLinks;
+}
+
+/**
+ * Extract URLs from JSON data
+ * @param {string} jsonContent - JSON content as string
+ * @param {string} baseUrl - Base URL for context
+ * @returns {Array} Array of link objects
+ */
+function extractLinksFromJson(jsonContent, baseUrl) {
+  const links = [];
+  
+  try {
+    // Find all URL-like patterns in the JSON
+    const urlPattern = /(https?:\/\/[^\s"',\]}\)]+)/g;
+    let match;
+    
+    while ((match = urlPattern.exec(jsonContent)) !== null) {
+      const url = match[1];
+      // Use domain as text since we don't have link text in JSON
+      const domain = new URL(url).hostname;
+      links.push({ url, text: domain });
+    }
+    
+    // Remove duplicates
+    return links.filter((link, index, self) => 
+      index === self.findIndex(l => l.url === link.url)
+    );
+    
+  } catch (e) {
+    return [];
+  }
+}
+
+/**
+ * Filter links to find most relevant ones based on instruction
+ * @param {Array} links - Array of link objects
+ * @param {string} instruction - The search instruction
+ * @returns {Array} Filtered and scored links
+ */
+function filterRelevantLinks(links, instruction) {
+  if (!links || links.length === 0) return [];
+  
+  // Extract keywords from instruction
+  const keywords = instruction.toLowerCase()
+    .split(/\s+/)
+    .filter(word => word.length > 3 && !['find', 'show', 'get', 'search', 'look', 'the', 'for', 'and', 'with'].includes(word));
+  
+  // Score links based on relevance
+  const scoredLinks = links.map(link => {
+    let score = 0;
+    const linkText = link.text.toLowerCase();
+    const linkUrl = link.url.toLowerCase();
+    
+    // Score based on keyword matches in text and URL
+    keywords.forEach(keyword => {
+      if (linkText.includes(keyword)) score += 3;
+      if (linkUrl.includes(keyword)) score += 2;
+    });
+    
+    // Boost score for certain patterns
+    if (linkText.includes('result') || linkText.includes('match') || linkText.includes('score')) score += 2;
+    if (linkText.includes('schedule') || linkText.includes('game') || linkText.includes('team')) score += 1;
+    if (linkUrl.includes('/result') || linkUrl.includes('/match') || linkUrl.includes('/score')) score += 2;
+    
+    return { ...link, score };
+  });
+  
+  // Sort by score and return top results
+  return scoredLinks
+    .filter(link => link.score > 0)
+    .sort((a, b) => b.score - a.score);
+}
 
 /**
  * Get simplified toolkit for agents

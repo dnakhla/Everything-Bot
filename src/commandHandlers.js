@@ -77,25 +77,22 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
   let loopCount = 0;
     
   try {
-    // Send initial processing message
+    // Send initial processing message (not saved to history)
     fetchingMessage = await TelegramAPI.sendMessage(
       chatId,
       'Processing your question...',
       { reply_to_message_id: request_message_id }
     );
     
-    // Save the initial processing message
-    if (fetchingMessage) {
-      await saveBotMessage(chatId, fetchingMessage);
-      Logger.log(`Saved initial processing message ${fetchingMessage.message_id} to S3`);
-    }
+    // Note: Processing message is intentionally NOT saved to conversation history
+    Logger.log(`Sent processing message ${fetchingMessage?.message_id} (not saved to history)`)
 
     // Get recent conversation context
     const messages = await getMessagesFromLastNhours(chatId, 24);
     const conversation = JSON.stringify(messages);
 
     // Get agent configuration
-    const tools = getAgentTools();
+    const tools = await getAgentTools();
     Logger.log(`Loaded ${tools.length} tools: ${tools.map(t => t.function.name).join(', ')}`);
     const { MAX_LOOPS, MAX_TOOL_USAGE, DEFAULT_TOOL_COUNTS } = TOOL_USAGE_CONFIG;
     const toolUsageCount = { ...DEFAULT_TOOL_COUNTS };
@@ -179,6 +176,17 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
             if (toolResult && typeof toolResult === 'object' && toolResult.__MESSAGES_SENT__) {
               Logger.log(`Messages already sent (${toolResult.count}), ending loop`);
               messagesSent = true;
+              
+              // Delete the status message since responses have been sent
+              if (fetchingMessage) {
+                try {
+                  await TelegramAPI.deleteMessage(chatId, fetchingMessage.message_id);
+                  Logger.log(`Deleted status message ${fetchingMessage.message_id} after sending responses`);
+                } catch (error) {
+                  Logger.log(`Failed to delete status message: ${error.message}`, 'warn');
+                }
+              }
+              
               break; // End the loop immediately - no need to send again
             }
             
@@ -204,7 +212,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
         Logger.log(`OpenAI API error: ${apiError.message}`, 'error');
         Logger.log(`Error stack: ${apiError.stack}`, 'error');
         Logger.log(`Error name: ${apiError.name}`, 'error');
-        Logger.log(`Full error object:`, apiError);
+        Logger.log(`Full error object: ${JSON.stringify(apiError)}`, 'error');
         await safeEditMessage(chatId, fetchingMessage?.message_id, 
           'Sorry, I encountered an error while processing your request. Please try again.');
         return;
@@ -388,7 +396,7 @@ export async function handleHelpCommand(chatId) {
 
 **Commands:**
 • \`/help\` - Show this help message
-• \`/clearmessages [number]\` - Delete bot's last messages (default: 1, max: 20)
+• \`/clearmessages [number]\` - Delete bot's last messages (default: 4, max: 20)
 • \`/cancel\` - Cancel current bot operation
 
 **Features:**
@@ -399,9 +407,13 @@ export async function handleHelpCommand(chatId) {
 📊 **Data Processing** - Summarization, filtering, analysis
 
 **Personalities:**
-Add personality hints like:
-• \`robot as a scientist, explain quantum computing\`
-• \`x-bot as a chef, what's a good pasta recipe?\`
+Available personas with unique expertise:
+• \`scientist-bot, explain quantum computing\` - Dr. Research (evidence-based analysis)
+• \`detective-bot, investigate this claim\` - Detective Holmes (fact verification)
+• \`chef-bot, best pasta recipe?\` - Chef Antoine (culinary expertise)
+• \`engineer-bot, optimize this process\` - Engineer Mike (technical solutions)
+• \`conspiracy-bot, what's really happening?\` - Truth Seeker (alternative perspectives)
+• \`conservative-bot, traditional approach?\` - Conservative Voice (values-based analysis)
 
 The bot remembers context and can reference previous conversations. Just ask naturally!`;
 
@@ -474,76 +486,17 @@ async function deleteBotMessages(chatId, count) {
 /**
  * Handle clear messages command - deletes bot's recent messages from Telegram and S3
  * @param {string|number} chatId - The chat ID
- * @param {number} count - Number of bot messages to delete (default: 1)
+ * @param {number} count - Number of bot messages to delete (default: 4)
  */
-export async function handleClearMessagesCommand(chatId, count = 1) {
+export async function handleClearMessagesCommand(chatId, count = 4) {
   try {
     // Validate count parameter
     const numToDelete = Math.max(1, Math.min(count, 20)); // Limit between 1 and 20
     
-    const statusMessage = await TelegramAPI.sendMessage(chatId, `🗑️ Deleting last ${numToDelete} bot message${numToDelete > 1 ? 's' : ''}...`);
-    if (statusMessage) {
-      await saveBotMessage(chatId, statusMessage);
-    }
-    
+    // Just delete the messages silently, no status or confirmation messages
     const { deletedFromTelegram, deletedFromS3 } = await deleteBotMessages(chatId, numToDelete);
     
-    // Delete the status message immediately after deletion is complete
-    if (statusMessage) {
-      try {
-        await TelegramAPI.deleteMessage(chatId, statusMessage.message_id);
-        Logger.log(`Deleted status message ${statusMessage.message_id}`);
-        
-        // Remove from S3 storage  
-        const key = `fact_checker_bot/groups/${chatId}.json`;
-        const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
-        if (existingData && existingData.messages) {
-          existingData.messages = existingData.messages.filter(msg => 
-            msg.messageId !== statusMessage.message_id
-          );
-          await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
-          Logger.log(`Removed status message ${statusMessage.message_id} from S3`);
-        }
-      } catch (error) {
-        Logger.log(`Failed to delete status message: ${error.message}`, 'warn');
-      }
-    }
-    
-    let resultMessage;
-    if (deletedFromTelegram > 0 || deletedFromS3 > 0) {
-      resultMessage = await TelegramAPI.sendMessage(chatId, 
-        `✅ Deleted ${deletedFromTelegram} message${deletedFromTelegram !== 1 ? 's' : ''} from Telegram and ${deletedFromS3} from storage.`
-      );
-    } else {
-      resultMessage = await TelegramAPI.sendMessage(chatId, 
-        '💭 No recent bot messages found to delete.'
-      );
-    }
-    
-    if (resultMessage) {
-      await saveBotMessage(chatId, resultMessage);
-      
-      // Auto-delete the confirmation message after 2 seconds
-      setTimeout(async () => {
-        try {
-          await TelegramAPI.deleteMessage(chatId, resultMessage.message_id);
-          Logger.log(`Auto-deleted confirmation message ${resultMessage.message_id}`);
-          
-          // Also remove from S3 storage
-          const key = `fact_checker_bot/groups/${chatId}.json`;
-          const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
-          if (existingData && existingData.messages) {
-            existingData.messages = existingData.messages.filter(msg => 
-              msg.messageId !== resultMessage.message_id
-            );
-            await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
-            Logger.log(`Removed confirmation message ${resultMessage.message_id} from S3`);
-          }
-        } catch (error) {
-          Logger.log(`Failed to auto-delete confirmation message: ${error.message}`, 'warn');
-        }
-      }, 2000);
-    }
+    Logger.log(`Silently deleted ${deletedFromTelegram} messages from Telegram and ${deletedFromS3} from S3 storage`);
   } catch (error) {
     Logger.log(`Error in handleClearMessagesCommand: ${error.message}`, 'error');
     await TelegramAPI.sendMessage(chatId, 
@@ -579,7 +532,7 @@ export async function handleMessage(chatId, text, message) {
   } else if (text.startsWith('/clearmessages')) {
     // Parse optional number parameter
     const parts = text.split(' ');
-    let count = 1; // default
+    let count = 4; // default
     if (parts.length > 1) {
       const parsed = parseInt(parts[1]);
       if (!isNaN(parsed) && parsed > 0) {
@@ -601,6 +554,7 @@ export async function handleMessage(chatId, text, message) {
     if (match) {
       const personality = match[1].toLowerCase().trim();
       const query = text.replace(/(.+?)[\s]*-[\s]*bot[\s,]*/i, '').trim();
+      Logger.log(`Detected persona: "${personality}", query: "${query}"`);
       await handleRobotQuery(chatId, query, personality, message.message_id);
     }
   } else {

@@ -30,6 +30,7 @@ async function showMenu() {
         { name: '🔍 Search messages', value: 'search' },
         { name: '📊 Recent activity', value: 'activity' },
         { name: '📈 Show stats', value: 'stats' },
+        { name: '🗑️ Delete chat', value: 'deleteChat' },
         { name: '🚪 Exit', value: 'exit' }
       ]
     }
@@ -41,6 +42,7 @@ async function showMenu() {
     case 'search': await searchMessages(); break;
     case 'activity': await showRecentActivity(); break;
     case 'stats': await showStats(); break;
+    case 'deleteChat': await selectChatForDeletion(); break;
     case 'exit': 
       console.log(chalk.green('\nGoodbye! 👋\n'));
       process.exit(0);
@@ -403,6 +405,130 @@ async function showStats() {
   }
 
   showMenu();
+}
+
+// Select chat for deletion
+async function selectChatForDeletion() {
+  if (users.length === 0) {
+    console.log(chalk.red('\nNo chats loaded. Please list chats first.'));
+    await showMenu();
+    return;
+  }
+
+  const { user } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'user',
+      message: '🗑️ Select a chat to DELETE (this cannot be undone):',
+      choices: [
+        ...users.map(user => ({
+          name: `${user.name} (${user.messageCount} messages) - ID: ${user.id}`,
+          value: user
+        })),
+        { name: chalk.gray('← Back to main menu'), value: null }
+      ]
+    }
+  ]);
+
+  if (!user) {
+    await showMenu();
+    return;
+  }
+
+  await confirmAndDeleteChat(user);
+}
+
+// Confirm and delete chat
+async function confirmAndDeleteChat(user) {
+  console.log(chalk.yellow(`\n⚠️  WARNING: You are about to DELETE chat data for:`));
+  console.log(chalk.white(`   Chat Name: ${user.name}`));
+  console.log(chalk.white(`   Chat ID: ${user.id}`));
+  console.log(chalk.white(`   Messages: ${user.messageCount}`));
+  console.log(chalk.red(`\n   This action CANNOT be undone!`));
+
+  const { confirm } = await inquirer.prompt([
+    {
+      type: 'confirm',
+      name: 'confirm',
+      message: 'Are you absolutely sure you want to delete this chat?',
+      default: false
+    }
+  ]);
+
+  if (!confirm) {
+    console.log(chalk.green('\n✅ Chat deletion cancelled.'));
+    await showMenu();
+    return;
+  }
+
+  // Double confirmation for safety
+  const { doubleConfirm } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'doubleConfirm',
+      message: `Type "DELETE ${user.id}" to confirm deletion:`,
+      validate: (input) => {
+        if (input === `DELETE ${user.id}`) {
+          return true;
+        }
+        return `Please type exactly: DELETE ${user.id}`;
+      }
+    }
+  ]);
+
+  try {
+    console.log(chalk.yellow('\n🗑️ Deleting chat data...'));
+    
+    // Delete the chat file from S3
+    const key = `fact_checker_bot/groups/${user.id}.json`;
+    await S3Manager.deleteObject(CONFIG.S3_BUCKET_NAME, key);
+    
+    // Remove from local users array
+    const index = users.findIndex(u => u.id === user.id);
+    if (index > -1) {
+      users.splice(index, 1);
+    }
+    
+    console.log(chalk.green(`\n✅ Successfully deleted chat: ${user.name}`));
+    console.log(chalk.gray(`   Removed ${user.messageCount} messages from storage`));
+    
+  } catch (error) {
+    console.error(chalk.red(`\n❌ Failed to delete chat: ${error.message}`));
+    
+    if (error.name === 'NoSuchKey' || error.code === 'NoSuchKey') {
+      console.log(chalk.yellow('   The chat file may have already been deleted.'));
+      // Remove from local array anyway
+      const index = users.findIndex(u => u.id === user.id);
+      if (index > -1) {
+        users.splice(index, 1);
+      }
+    }
+  }
+
+  const { nextAction } = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'nextAction',
+      message: 'What would you like to do next?',
+      choices: [
+        { name: '🗑️ Delete another chat', value: 'deleteAnother' },
+        { name: '💬 List remaining chats', value: 'listChats' },
+        { name: '🏠 Back to main menu', value: 'mainMenu' }
+      ]
+    }
+  ]);
+
+  switch (nextAction) {
+    case 'deleteAnother':
+      await selectChatForDeletion();
+      break;
+    case 'listChats':
+      await listUsers();
+      break;
+    default:
+      await showMenu();
+      break;
+  }
 }
 
 // Initialize

@@ -13,8 +13,10 @@ import {
   images,
   calculate,
   analyze,
-  fetch_url
+  fetch_url,
+  browser
 } from '../tools/agentToolkit.js';
+import { analyzeImage, analyzeImageContent } from '../tools/imageAnalysis.js';
 import { TOOL_USAGE_CONFIG } from './agentConfig.js';
 
 /**
@@ -25,7 +27,7 @@ import { TOOL_USAGE_CONFIG } from './agentConfig.js';
  * @returns {Promise<string>} Result of the function execution
  */
 export async function executeAgentTool(functionName, functionArgs, chatId) {
-  Logger.log(`Executing agent tool: ${functionName} with args:`, functionArgs);
+  Logger.log(`Executing agent tool: ${functionName} with args: ${JSON.stringify(functionArgs)}`);
   
   try {
     // Add timeout for Lambda compatibility
@@ -53,6 +55,12 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
         case 'fetch_url':
           return await executeFetchUrlTool(functionArgs);
           
+        case 'browser':
+          return await executeBrowserTool(functionArgs, chatId);
+          
+        case 'analyze_image':
+          return await executeAnalyzeImageTool(functionArgs, chatId);
+          
         case 'send_messages':
           return await executeSendMessagesTool(functionArgs, chatId);
           
@@ -75,7 +83,7 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
 async function executeSearchTool(args, chatId) {
   const { query, topic = 'web', options = {} } = args;
   
-  Logger.log(`Search: "${query}" in topic "${topic}" with options:`, options);
+  Logger.log(`Search: "${query}" in topic "${topic}" with options: ${JSON.stringify(options)}`);
   
   const result = await search(query, topic, options);
   return result;
@@ -87,7 +95,7 @@ async function executeSearchTool(args, chatId) {
 async function executeMessagesTool(args, chatId) {
   const { action, params = {} } = args;
   
-  Logger.log(`Messages: action "${action}" with params:`, params);
+  Logger.log(`Messages: action "${action}" with params: ${JSON.stringify(params)}`);
   
   const result = await messages(chatId, action, params);
   return result;
@@ -99,7 +107,7 @@ async function executeMessagesTool(args, chatId) {
 async function executeImagesTool(args, chatId) {
   const { action, params = {} } = args;
   
-  Logger.log(`Images: action "${action}" with params:`, params);
+  Logger.log(`Images: action "${action}" with params: ${JSON.stringify(params)}`);
   
   const result = await images(chatId, action, params);
   return result;
@@ -123,7 +131,7 @@ async function executeCalculateTool(args) {
 async function executeAnalyzeTool(args) {
   const { content, action = 'summarize', options = {} } = args;
   
-  Logger.log(`Analyze: action "${action}" with options:`, options);
+  Logger.log(`Analyze: action "${action}" with options: ${JSON.stringify(options)}`);
   
   const result = await analyze(content, action, options);
   return result;
@@ -142,16 +150,49 @@ async function executeFetchUrlTool(args) {
 }
 
 /**
+ * Execute browser tool with proper parameter mapping
+ */
+async function executeBrowserTool(args, chatId) {
+  const { url, action = 'scrape', options = {} } = args;
+  
+  Logger.log(`Browser: "${url}" action "${action}" with options: ${JSON.stringify(options)}`);
+  
+  const result = await browser(url, action, options, chatId);
+  return result;
+}
+
+/**
+ * Execute analyze_image tool with proper parameter mapping
+ */
+async function executeAnalyzeImageTool(args, chatId) {
+  const { imageData, instruction = 'analyze this image', contentType = 'general' } = args;
+  
+  Logger.log(`Analyze Image: instruction "${instruction}", contentType "${contentType}"`);
+  
+  if (contentType === 'general') {
+    const result = await analyzeImage(imageData, instruction, chatId);
+    return result;
+  } else {
+    const result = await analyzeImageContent(imageData, contentType, chatId);
+    return result;
+  }
+}
+
+/**
  * Execute send_messages tool - this sends messages directly with staggered delays
  */
 async function executeSendMessagesTool(args, chatId) {
   const { messages, links_message } = args;
   
-  Logger.log(`Send Messages: ${messages.length} messages`, { has_links: !!links_message });
+  Logger.log(`Send Messages: ${messages.length} messages, has_links: ${!!links_message}`);
   
   // Import here to avoid circular dependency
   const telegramModule = await import('../services/telegramAPI.js');
   const TelegramAPI = telegramModule.TelegramAPI;
+  
+  // Import saveBotMessage to save messages to S3
+  const messageServiceModule = await import('../services/messageService.js');
+  const { saveBotMessage } = messageServiceModule;
   
   // Combine messages and links if provided
   const finalMessages = [...messages];
@@ -164,10 +205,18 @@ async function executeSendMessagesTool(args, chatId) {
     for (let i = 0; i < finalMessages.length; i++) {
       const message = finalMessages[i];
       
-      await TelegramAPI.sendMessage(chatId, message, {
+      const sentMessage = await TelegramAPI.sendMessage(chatId, message, {
         parse_mode: 'Markdown',
         disable_web_page_preview: false
       });
+      
+      // Save each sent message to S3
+      if (sentMessage) {
+        await saveBotMessage(chatId, sentMessage);
+        Logger.log(`Saved AI response message ${sentMessage.message_id} to S3`);
+      } else {
+        Logger.log(`Warning: Failed to send message ${i + 1}, could not save to S3`, 'warn');
+      }
       
       // Add quick delay between messages for natural flow
       if (i < finalMessages.length - 1) {
@@ -183,7 +232,7 @@ async function executeSendMessagesTool(args, chatId) {
       }
     }
     
-    Logger.log(`Successfully sent ${finalMessages.length} messages with delays`);
+    Logger.log(`Successfully sent ${finalMessages.length} messages with delays and saved to S3`);
     
     // Return special marker to indicate messages were sent and loop should end
     return {
@@ -261,14 +310,52 @@ export function getToolExecutionDescription(functionName, functionArgs) {
         'Summarizing content' : 
         'Analyzing data';
         
+    case 'browser':
+      const { url: browserUrl, action: browserAction = 'scrape', options: browserOptions = {} } = functionArgs;
+      const { instruction = '', waitFor = 3000 } = browserOptions;
+      
+      switch (browserAction) {
+        case 'scrape':
+          return `🌐 Opening browser to scrape: ${browserUrl}`;
+        case 'screenshot':
+          return `📸 Taking ${browserOptions.fullPageScreenshot ? 'full page' : 'viewport'} screenshot of: ${browserUrl}`;
+        case 'interact':
+          if (browserOptions.clickElement && browserOptions.fillForm) {
+            return `🖱️ Filling form and clicking "${browserOptions.clickElement}" on: ${browserUrl}`;
+          } else if (browserOptions.clickElement) {
+            return `🖱️ Clicking "${browserOptions.clickElement}" on: ${browserUrl}`;
+          } else if (browserOptions.fillForm) {
+            return `⌨️ Filling form fields on: ${browserUrl}`;
+          }
+          return `🤖 Interacting with page: ${browserUrl}`;
+        case 'wait-and-scrape':
+          return `⏳ Loading page (${waitFor}ms wait) and scraping dynamic content from: ${browserUrl}`;
+        case 'spa-scrape':
+          return `⚡ Loading Single Page App (${waitFor}ms) and extracting content from: ${browserUrl}`;
+        case 'links':
+          return `🔗 Extracting relevant links from: ${browserUrl}`;
+        case 'find-clickables':
+          return `🔍 Scanning for clickable elements related to "${instruction}" on: ${browserUrl}`;
+        case 'smart-navigate':
+          return `🧠 Smart navigation: Auto-clicking through ${browserUrl} to find "${instruction}"`;
+        default:
+          return `🌐 Browser automation (${browserAction}) on: ${browserUrl}`;
+      }
+        
     case 'fetch_url':
       const { url } = functionArgs;
-      return `Fetching content from: ${url}`;
+      return `📄 Fetching content from: ${url}`;
+        
+    case 'analyze_image':
+      const { instruction: imgInstruction = 'analyze image', contentType = 'general' } = functionArgs;
+      return contentType === 'general' ? 
+        `Analyzing image: "${imgInstruction}"` :
+        `Analyzing ${contentType}: "${imgInstruction}"`;
         
     case 'send_messages':
       return `Sending ${functionArgs.messages?.length || 1} chat messages`;
         
     default:
-      return `Executing ${functionName}`;
+      return `⚙️ Executing ${functionName}`;
   }
 }

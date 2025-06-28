@@ -17,4 +17,7 @@ export const CONFIG = {
   DEFAULT_SENSITIVITY: 75,
   SERPER_API_KEY: process.env.SERPER_API_KEY,
   BRAVE_API_KEY: process.env.BRAVE_API_KEY,
+  
+  // Feature flags
+  ENABLE_BROWSER_TOOL: process.env.ENABLE_BROWSER_TOOL === 'true',
 };
