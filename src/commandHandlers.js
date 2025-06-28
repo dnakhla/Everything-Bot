@@ -87,6 +87,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
     // Save the initial processing message
     if (fetchingMessage) {
       await saveBotMessage(chatId, fetchingMessage);
+      Logger.log(`Saved initial processing message ${fetchingMessage.message_id} to S3`);
     }
 
     // Get recent conversation context
@@ -214,23 +215,34 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
     if (finalResponse && !messagesSent) {
       await sendFinalMessages(chatId, finalResponse, fetchingMessage, request_message_id);
       messagesSent = true;
+      Logger.log(`Final response sent and should be saved via sendFinalMessages`);
     } else if (!messagesSent) {
       Logger.log(`Maximum loops (${MAX_LOOPS}) reached without final response`);
-      await safeEditMessage(chatId, fetchingMessage?.message_id, 
+      const timeoutMessage = await safeEditMessage(chatId, fetchingMessage?.message_id, 
         'I was unable to complete your request within the time limit. Please try a simpler question.');
+      // Save the timeout message
+      if (timeoutMessage) {
+        await saveBotMessage(chatId, timeoutMessage);
+        Logger.log(`Saved timeout message ${timeoutMessage.message_id} to S3`);
+      }
     }
 
     // Save user interaction to message history  
     await saveUserMessage(chatId, user_query, 'user');
-    // Note: Bot messages are now saved in sendFinalMessages() function
+    // Note: Bot messages are now saved in sendFinalMessages() function or above for timeout cases
 
   } catch (error) {
     Logger.log(`Error in handleRobotQuery: ${error.message}`, 'error');
     Logger.log(error.stack, 'error');
     
     try {
-      await safeEditMessage(chatId, fetchingMessage?.message_id, 
+      const errorMessage = await safeEditMessage(chatId, fetchingMessage?.message_id, 
         'Sorry, I encountered an unexpected error. Please try again later.');
+      // Save the error message
+      if (errorMessage) {
+        await saveBotMessage(chatId, errorMessage);
+        Logger.log(`Saved error message ${errorMessage.message_id} to S3`);
+      }
     } catch (editError) {
       Logger.log(`Failed to send error message: ${editError.message}`, 'error');
     }
@@ -270,11 +282,13 @@ async function sendFinalMessages(chatId, messages, fetchingMessage, replyToMessa
         const key = `fact_checker_bot/groups/${chatId}.json`;
         const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
         if (existingData && existingData.messages) {
+          const beforeCount = existingData.messages.length;
           existingData.messages = existingData.messages.filter(msg => 
             msg.messageId !== fetchingMessage.message_id
           );
+          const afterCount = existingData.messages.length;
           await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
-          Logger.log(`Removed processing message ${fetchingMessage.message_id} from S3`);
+          Logger.log(`Removed processing message ${fetchingMessage.message_id} from S3 (${beforeCount} -> ${afterCount} messages)`);
         }
       } catch (error) {
         Logger.log(`Failed to delete processing message: ${error.message}`, 'warn');
@@ -294,6 +308,9 @@ async function sendFinalMessages(chatId, messages, fetchingMessage, replyToMessa
       // Save each new message to S3
       if (sentMessage) {
         await saveBotMessage(chatId, sentMessage);
+        Logger.log(`Saved final response message ${sentMessage.message_id} to S3`);
+      } else {
+        Logger.log(`Warning: Failed to send final response message ${i + 1}`, 'warn');
       }
       
       // Stagger messages with increasing delay for natural conversation feel
