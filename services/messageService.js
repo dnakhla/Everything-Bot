@@ -1305,3 +1305,46 @@ export async function markMessageAsProcessed(chatId, messageId) {
     // Do not rethrow, processing should continue even if marking fails
   }
 }
+
+/**
+ * Clear all messages for a specific chat by deleting them from S3
+ * 
+ * @param {string|number} chatId - The chat ID to clear messages for
+ * @returns {Promise<number>} - Number of messages deleted
+ */
+export async function clearMessagesForChat(chatId) {
+  try {
+    Logger.log(`Clearing all messages for chat ${chatId}`);
+    
+    const prefix = `messages/chat-${chatId}/`;
+    
+    // List all objects with the chat prefix
+    const listResult = await S3Manager.listObjects(prefix);
+    
+    if (!listResult.Contents || listResult.Contents.length === 0) {
+      Logger.log(`No messages found for chat ${chatId}`);
+      return 0;
+    }
+    
+    // Delete all message files
+    const deletePromises = listResult.Contents.map(async (object) => {
+      try {
+        await S3Manager.deleteObject(CONFIG.S3_BUCKET_NAME, object.Key);
+        return true;
+      } catch (error) {
+        Logger.log(`Error deleting ${object.Key}: ${error.message}`, 'error');
+        return false;
+      }
+    });
+    
+    const results = await Promise.all(deletePromises);
+    const deletedCount = results.filter(success => success).length;
+    
+    Logger.log(`Successfully deleted ${deletedCount}/${listResult.Contents.length} messages for chat ${chatId}`);
+    return deletedCount;
+    
+  } catch (error) {
+    Logger.log(`Error clearing messages for chat ${chatId}: ${error.message}`, 'error');
+    throw error;
+  }
+}

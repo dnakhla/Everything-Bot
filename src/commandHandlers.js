@@ -12,8 +12,10 @@ import { TelegramAPI } from '../services/telegramAPI.js';
 import {
   saveUserMessage,
   saveBotMessage,
-  getMessagesFromLastNhours
+  getMessagesFromLastNhours,
+  clearMessagesForChat
 } from '../services/messageService.js';
+import { S3Manager } from '../services/s3Manager.js';
 
 // Import agent configuration and execution
 import { getAgentTools, getAgentSystemPrompt, TOOL_USAGE_CONFIG } from './agentConfig.js';
@@ -346,6 +348,11 @@ export async function handleHelpCommand(chatId) {
 • \`robot calculate 15% tip on $87.50\`
 • \`x-bot summarize our chat from yesterday\`
 
+**Commands:**
+• \`/help\` - Show this help message
+• \`/clearmessages [number]\` - Delete bot's last messages (default: 1, max: 20)
+• \`/cancel\` - Cancel current bot operation
+
 **Features:**
 🔍 **Search** - Web, news, Reddit, images, videos, places
 💬 **Chat Memory** - Remember conversations and find old messages  
@@ -361,6 +368,97 @@ Add personality hints like:
 The bot remembers context and can reference previous conversations. Just ask naturally!`;
 
   await TelegramAPI.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
+}
+
+/**
+ * Delete bot messages from both Telegram and S3 storage
+ * @param {string|number} chatId - The chat ID
+ * @param {number} count - Number of recent bot messages to delete
+ * @returns {Promise<{deletedFromTelegram: number, deletedFromS3: number}>}
+ */
+async function deleteBotMessages(chatId, count) {
+  let deletedFromTelegram = 0;
+  let deletedFromS3 = 0;
+  
+  try {
+    // Get stored messages from S3
+    const key = `fact_checker_bot/groups/${chatId}.json`;
+    const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
+    
+    if (!existingData || !existingData.messages) {
+      Logger.log(`No messages found in S3 for chat ${chatId}`);
+      return { deletedFromTelegram, deletedFromS3 };
+    }
+    
+    // Find recent bot messages (isBot: true) sorted by newest first
+    const botMessages = existingData.messages
+      .filter(msg => msg.isBot && msg.messageId)
+      .sort((a, b) => (b.timestamp?.unix || 0) - (a.timestamp?.unix || 0))
+      .slice(0, count);
+    
+    Logger.log(`Found ${botMessages.length} recent bot messages to delete`);
+    
+    // Delete from Telegram first
+    for (const message of botMessages) {
+      try {
+        await TelegramAPI.deleteMessage(chatId, message.messageId);
+        deletedFromTelegram++;
+        Logger.log(`Deleted message ${message.messageId} from Telegram`);
+      } catch (error) {
+        Logger.log(`Failed to delete message ${message.messageId} from Telegram: ${error.message}`, 'warn');
+        // Continue even if Telegram deletion fails (message might already be deleted)
+      }
+    }
+    
+    // Remove from S3 storage
+    const messageIdsToDelete = botMessages.map(msg => msg.messageId);
+    existingData.messages = existingData.messages.filter(msg => 
+      !messageIdsToDelete.includes(msg.messageId)
+    );
+    
+    // Save updated data back to S3
+    await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
+    deletedFromS3 = messageIdsToDelete.length;
+    
+    Logger.log(`Deleted ${deletedFromS3} bot messages from S3 storage`);
+    
+  } catch (error) {
+    Logger.log(`Error in deleteBotMessages: ${error.message}`, 'error');
+    throw error;
+  }
+  
+  return { deletedFromTelegram, deletedFromS3 };
+}
+
+/**
+ * Handle clear messages command - deletes bot's recent messages from Telegram and S3
+ * @param {string|number} chatId - The chat ID
+ * @param {number} count - Number of bot messages to delete (default: 1)
+ */
+export async function handleClearMessagesCommand(chatId, count = 1) {
+  try {
+    // Validate count parameter
+    const numToDelete = Math.max(1, Math.min(count, 20)); // Limit between 1 and 20
+    
+    await TelegramAPI.sendMessage(chatId, `🗑️ Deleting last ${numToDelete} bot message${numToDelete > 1 ? 's' : ''}...`);
+    
+    const { deletedFromTelegram, deletedFromS3 } = await deleteBotMessages(chatId, numToDelete);
+    
+    if (deletedFromTelegram > 0 || deletedFromS3 > 0) {
+      await TelegramAPI.sendMessage(chatId, 
+        `✅ Deleted ${deletedFromTelegram} message${deletedFromTelegram !== 1 ? 's' : ''} from Telegram and ${deletedFromS3} from storage.`
+      );
+    } else {
+      await TelegramAPI.sendMessage(chatId, 
+        '💭 No recent bot messages found to delete.'
+      );
+    }
+  } catch (error) {
+    Logger.log(`Error in handleClearMessagesCommand: ${error.message}`, 'error');
+    await TelegramAPI.sendMessage(chatId, 
+      '❌ Failed to delete messages. Please try again later.'
+    );
+  }
 }
 
 /**
@@ -387,6 +485,17 @@ export async function handleMessage(chatId, text, message) {
     
   if (text.startsWith('/help')) {
     await handleHelpCommand(chatId);
+  } else if (text.startsWith('/clearmessages')) {
+    // Parse optional number parameter
+    const parts = text.split(' ');
+    let count = 1; // default
+    if (parts.length > 1) {
+      const parsed = parseInt(parts[1]);
+      if (!isNaN(parsed) && parsed > 0) {
+        count = parsed;
+      }
+    }
+    await handleClearMessagesCommand(chatId, count);
   } else if (text.startsWith('/cancel')) {
     requestCancellation(chatId);
     await TelegramAPI.sendMessage(chatId, '🛑 Cancellation requested. The bot will stop processing after the current operation.', { 

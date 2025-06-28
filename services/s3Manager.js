@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { Logger } from '../utils/logger.js';
 import { CONFIG } from '../config.js';
 import { streamToString } from '../utils/utils.js';
@@ -44,6 +44,33 @@ const S3Manager = {
       return response.Contents || [];
     } catch (error) {
       Logger.log(`Error listing objects from S3: ${error.message}`, 'error');
+      throw error;
+    }
+  },
+
+  deleteObject: async (bucket, key) => {
+    try {
+      await s3.send(new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key
+      }));
+      Logger.log(`Successfully deleted object: ${key}`);
+    } catch (error) {
+      Logger.log(`Error deleting object ${key}: ${error.message}`, 'error');
+      throw error;
+    }
+  },
+
+  listObjects: async (prefix = '') => {
+    try {
+      const command = new ListObjectsV2Command({
+        Bucket: CONFIG.S3_BUCKET_NAME,
+        Prefix: prefix,
+      });
+      const response = await s3.send(command);
+      return response;
+    } catch (error) {
+      Logger.log(`Error listing objects: ${error.message}`, 'error');
       throw error;
     }
   },

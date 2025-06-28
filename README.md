@@ -1,15 +1,15 @@
-# 🤖 FactChecker Bot
+# 🤖 Everything Bot
 
 **The ONLY Telegram Bot That Actually Transcribes Audio, Analyzes Media, Searches the Web & Remembers Everything!**
 
-This advanced Telegram bot transforms group discussions by providing instant transcription, media analysis, web research, and persistent memory. Built as a sophisticated AI agent, it leverages cutting-edge models and specialized tools to enhance your conversations with intelligent insights.
+Everything Bot is an advanced Telegram AI assistant that transforms group discussions by providing instant transcription, media analysis, web research, and persistent memory. Built as a sophisticated AI agent, it leverages cutting-edge models and specialized tools to enhance your conversations with intelligent insights.
 
 --- 
 
 ### ✨ **Experience the Bot Live!**
 
 - **🚀 Add to Telegram:** [@LetMeCheckThatBot](https://t.me/LetMeCheckThatBot)
-- **🌐 Project Website:** [https://dnakhla.github.io/TelegramFactChecker/](https://dnakhla.github.io/TelegramFactChecker/)
+- **🌐 Project Website:** [https://dnakhla.github.io/Everything-Bot/](https://dnakhla.github.io/Everything-Bot/)
 
 ![Bot Live on Telegram](assets/livedemo.png)
 
@@ -25,6 +25,51 @@ More than just a chatbot, this bot operates as a sophisticated AI agent capable 
 4.  **Synthesized Response:** Finally, it synthesizes all gathered information into a concise, conversational, and easy-to-understand response, delivered naturally as a series of short Telegram messages.
 
 This multi-step, adaptive approach allows for highly accurate and nuanced answers, far surpassing the capabilities of traditional single-prompt AI systems.
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TB
+    subgraph "External Services"
+        TG[📱 Telegram Bot API]
+        OAI[🧠 OpenAI GPT-4]
+        WEB[🌐 Web APIs<br/>Serper, Brave Search]
+    end
+    
+    subgraph "AWS Cloud Infrastructure"
+        APIGW[🚪 API Gateway<br/>Webhook Endpoint]
+        LAMBDA[⚡ Lambda Function<br/>Node.js Runtime]
+        S3[🗄️ S3 Storage<br/>Conversation History<br/>Media Files]
+        CW[📊 CloudWatch<br/>Logs & Monitoring]
+        EB[⏰ EventBridge<br/>Scheduled Tasks]
+    end
+    
+    subgraph "Core Processing"
+        AGENT[🤖 AI Agent<br/>Tool Selection<br/>Response Generation]
+        TOOLS[🔧 Specialized Tools<br/>• Web Search<br/>• Image Analysis<br/>• Voice Transcription<br/>• Memory Search]
+    end
+    
+    %% Message flow
+    TG -->|Webhook| APIGW
+    APIGW --> LAMBDA
+    LAMBDA --> AGENT
+    AGENT --> TOOLS
+    TOOLS --> OAI
+    TOOLS --> WEB
+    LAMBDA <--> S3
+    LAMBDA --> CW
+    EB --> LAMBDA
+    LAMBDA -->|Response| TG
+    
+    %% Styling
+    classDef aws fill:#ff9900,stroke:#232f3e,stroke-width:2px,color:#fff
+    classDef external fill:#4285f4,stroke:#1a73e8,stroke-width:2px,color:#fff
+    classDef processing fill:#34a853,stroke:#137333,stroke-width:2px,color:#fff
+    
+    class APIGW,LAMBDA,S3,CW,EB aws
+    class TG,OAI,WEB external
+    class AGENT,TOOLS processing
+```
 
 ## 🌟 Core Capabilities
 
@@ -79,7 +124,7 @@ This multi-step, adaptive approach allows for highly accurate and nuanced answer
 *   `conspiracy-bot [question]` - Alternative perspective analysis
 
 ### Management Commands
-*   `/clearmessages` - Clear stored conversation history and recent bot messages
+*   `/clearmessages [number]` - Delete bot's last messages (default: 1, max: 20)
 *   `/cancel` - Stop current bot operation if taking too long
 
 ### Media Support
@@ -98,8 +143,8 @@ For detailed technical documentation and architecture diagrams, see the [`docs/`
 - **[Agent Interaction Sequence](docs/agent-sequence.puml)** - Detailed multi-agent coordination flow
 - **[Agent Decision Tree](docs/agent-decision-tree.puml)** - Agent selection and routing logic
 
-### Multi-Agent System Overview
-Everything Bot uses a sophisticated multi-agent architecture where specialized AI agents collaborate to handle different types of input:
+### Agent-Based Architecture Overview
+Everything Bot uses a sophisticated agent-based architecture where specialized AI tools collaborate to handle different types of input:
 
 ```mermaid
 graph TB
