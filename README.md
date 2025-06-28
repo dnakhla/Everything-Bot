@@ -141,7 +141,7 @@ const agentTools = [
 
 ### **✅ Working End-to-End Solution**
 - Production-deployed Lambda function
-- Live Telegram bot: [@FactCheckerAI_bot](https://t.me/FactCheckerAI_bot)
+- Live Telegram bot: [@LetMeCheckThatBot](https://t.me/LetMeCheckThatBot)
 - Real user conversations being processed
 - Automated daily summaries running
 
@@ -267,7 +267,7 @@ Solves real organizational challenges around information verification and team c
 
 **Project Documentation**: [https://dnakhla.github.io/Everything-Bot/](https://dnakhla.github.io/Everything-Bot/)
 
-**Live Demo Bot**: [@FactCheckerAI_bot](https://t.me/FactCheckerAI_bot)
+**Live Demo Bot**: [@LetMeCheckThatBot](https://t.me/LetMeCheckThatBot)
 
 ---
 
