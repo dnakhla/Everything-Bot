@@ -48,13 +48,28 @@ export const getRecentConversationSummary = createToolWrapper(
 );
 
 export const getMessagesFromLastHours = createToolWrapper(
-  MessageService.getMessagesFromLastNhours,
+  async (chatId, hours) => {
+    console.log(`[DEBUG] getMessagesFromLastHours called with chatId: ${chatId}, hours: ${hours}`);
+    const result = await MessageService.getMessagesFromLastNhours(chatId, hours);
+    console.log(`[DEBUG] getMessagesFromLastNhours returned:`, { 
+      type: typeof result, 
+      isArray: Array.isArray(result), 
+      length: result?.length,
+      sample: result?.slice(0, 2)
+    });
+    return result;
+  },
   {
     name: 'getMessagesFromLastHours',
     category: 'memory',
     description: 'Get messages from the last N hours',
     formatResult: (messages, params) => {
       const [chatId, hours] = params;
+      console.log(`[DEBUG] getMessagesFromLastHours formatResult:`, { 
+        messages: messages ? `Array(${messages.length})` : messages, 
+        chatId, 
+        hours 
+      });
       return formatMessagesResult(messages, `last ${hours} hours`);
     }
   }
@@ -75,13 +90,28 @@ export const getMessagesFromLastDays = createToolWrapper(
 
 // Specific image analysis tools with better context
 export const analyzeImagesFromTimeframe = createToolWrapper(
-  MessageService.analyzeRecentImages,
+  async (chatId, query, lookbackHours = 24) => {
+    console.log(`[DEBUG] analyzeImagesFromTimeframe called with:`, { chatId, query, lookbackHours });
+    const result = await MessageService.analyzeRecentImages(chatId, query, lookbackHours);
+    console.log(`[DEBUG] analyzeRecentImages returned:`, { 
+      type: typeof result, 
+      length: result?.length,
+      preview: result?.substring(0, 200)
+    });
+    return result;
+  },
   {
     name: 'analyzeImagesFromTimeframe',
     category: 'memory',
     description: 'Analyze images shared within a specific timeframe',
     formatResult: (analysis, params) => {
       const [chatId, query, lookbackHours = 24] = params;
+      console.log(`[DEBUG] analyzeImagesFromTimeframe formatResult:`, { 
+        analysis: analysis ? `String(${analysis.length})` : analysis, 
+        chatId, 
+        query, 
+        lookbackHours 
+      });
       if (!analysis || analysis.trim() === '') {
         return `🖼️ No images found in the last ${lookbackHours} hours matching "${query}".`;
       }
@@ -224,7 +254,22 @@ export const searchForSpecificImages = createToolWrapper(
 
 // Helper function to format message results (DRY principle)
 function formatMessagesResult(messages, description) {
-  if (!messages || messages.length === 0) {
+  console.log(`[DEBUG] formatMessagesResult called with:`, { 
+    messages: messages ? `Array(${messages.length})` : messages, 
+    description 
+  });
+  
+  if (!messages) {
+    console.log(`[ERROR] formatMessagesResult: messages is undefined/null for ${description}`);
+    return `📅 No messages data available for ${description}.`;
+  }
+  
+  if (!Array.isArray(messages)) {
+    console.log(`[ERROR] formatMessagesResult: messages is not an array for ${description}:`, typeof messages);
+    return `📅 Invalid message data format for ${description}.`;
+  }
+  
+  if (messages.length === 0) {
     return `📅 No messages found for ${description}.`;
   }
   

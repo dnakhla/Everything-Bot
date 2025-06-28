@@ -234,6 +234,9 @@ export async function saveUserMessage(chatId, message) {
         
     // Get existing messages
     const existingData = (await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key)) || { messages: [] };
+    
+    // Check if this is a new conversation (first user message)
+    const isNewConversation = existingData.messages.length === 0;
         
     // Create base message entry
     const messageEntry = {
@@ -391,12 +394,12 @@ export async function saveUserMessage(chatId, message) {
                           content: [
                             {
                               type: "text",
-                              text: `Analyze this ${animation.duration}s GIF animation. Describe what's happening, any movement or changes you can observe.`
+                              text: `Analyze this ${animation.duration}s GIF animation. This is likely a meme, reaction GIF, or animated content. Describe what's happening, any text visible, the emotional context or humor, and any movement or changes you can observe. If it appears to be a meme, explain the likely meaning or context.`
                             },
                             {
                               type: "image_url",
                               image_url: {
-                                url: animationData.dataUrl,
+                                url: animationData.mimeType === 'image/gif' ? animationData.dataUrl : `data:image/gif;base64,${animationData.base64Content}`,
                                 detail: "high"
                               }
                             }
@@ -735,8 +738,51 @@ export async function saveUserMessage(chatId, message) {
     await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
         
     Logger.log(`Saved user message from chat ${chatId}, message ID: ${message.message_id} with ${attachments.length} attachments`);
+    
+    // Notify admin if this is a new conversation
+    if (isNewConversation) {
+      await notifyAdminNewConversation(chatId, message);
+    }
   } catch (error) {
     Logger.log(`Error saving user message: ${error.message}`, 'error');
+  }
+}
+
+/**
+ * Notify admin when a new conversation starts
+ * @param {string|number} chatId - The chat ID  
+ * @param {Object} message - The first message from the user
+ */
+async function notifyAdminNewConversation(chatId, message) {
+  try {
+    const { TelegramAPI } = await import('../services/telegramAPI.js');
+    
+    const userName = message.from ? `${message.from.first_name || 'Unknown'} ${message.from.last_name || ''}`.trim() : 'Unknown';
+    const chatType = message.chat.type === 'private' ? 'Private Message' : 'Group Message';
+    const firstMessage = message.text || message.caption || '[Media/File]';
+    
+    const notificationMessage = `💬 **New Conversation Started!**
+
+👤 **User Details:**
+• **Name**: ${userName}
+• **Username**: ${message.from?.username ? `@${message.from.username}` : 'None'}
+• **ID**: \`${message.from?.id || 'Unknown'}\`
+• **Chat ID**: \`${chatId}\`
+• **Type**: ${chatType}
+• **Time**: ${new Date().toLocaleString()}
+
+📝 **First Message:**
+"${firstMessage.length > 200 ? firstMessage.substring(0, 200) + '...' : firstMessage}"
+
+🤖 _Bot is ready to respond!_`;
+
+    await TelegramAPI.sendMessage(CONFIG.ADMIN_CHAT_ID, notificationMessage, {
+      parse_mode: 'Markdown'
+    });
+    
+    Logger.log(`Admin notification sent for new conversation from ${userName} (${chatId})`);
+  } catch (error) {
+    Logger.log(`Failed to send admin notification for new conversation ${chatId}: ${error.message}`, 'warn');
   }
 }
 
@@ -1044,8 +1090,21 @@ export async function getConversationSummary(chatId, hours = 24) {
  */
 export async function analyzeRecentImages(chatId, query, lookbackHours = 24) {
   try {
+    Logger.log(`[DEBUG] analyzeRecentImages starting: chatId=${chatId}, query="${query}", lookbackHours=${lookbackHours}`);
+    
     // Get recent messages with images
     const messages = await getMessagesFromLastNhours(chatId, lookbackHours);
+    Logger.log(`[DEBUG] analyzeRecentImages: getMessagesFromLastNhours returned`, { 
+      type: typeof messages, 
+      isArray: Array.isArray(messages), 
+      length: messages?.length 
+    });
+    
+    if (!messages || !Array.isArray(messages)) {
+      Logger.log(`[ERROR] analyzeRecentImages: messages is not an array: ${typeof messages}`, 'error');
+      return `Error: Could not retrieve messages from the last ${lookbackHours} hours.`;
+    }
+    
     const imageMessages = messages.filter(msg => 
       msg.attachments && msg.attachments.some(att => att.type === 'photo')
     );

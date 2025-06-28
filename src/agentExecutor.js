@@ -182,9 +182,9 @@ async function executeAnalyzeImageTool(args, chatId) {
  * Execute send_messages tool - this sends messages directly with staggered delays
  */
 async function executeSendMessagesTool(args, chatId) {
-  const { messages, links_message } = args;
+  const { messages } = args;
   
-  Logger.log(`Send Messages: ${messages.length} messages, has_links: ${!!links_message}`);
+  Logger.log(`[SEND_MESSAGES] Starting: ${messages.length} messages, chatId: ${chatId}`);
   
   // Import here to avoid circular dependency
   const telegramModule = await import('../services/telegramAPI.js');
@@ -194,11 +194,8 @@ async function executeSendMessagesTool(args, chatId) {
   const messageServiceModule = await import('../services/messageService.js');
   const { saveBotMessage } = messageServiceModule;
   
-  // Combine messages and links if provided
+  // Use messages directly - no separate links handling
   const finalMessages = [...messages];
-  if (links_message) {
-    finalMessages.push(links_message);
-  }
   
   // Send messages with staggered delays
   try {
@@ -232,12 +229,13 @@ async function executeSendMessagesTool(args, chatId) {
       }
     }
     
-    Logger.log(`Successfully sent ${finalMessages.length} messages with delays and saved to S3`);
+    Logger.log(`[SEND_MESSAGES] Successfully sent ${finalMessages.length} messages with delays and saved to S3`);
     
     // Return special marker to indicate messages were sent and loop should end
     return {
       __MESSAGES_SENT__: true,
-      count: finalMessages.length
+      count: finalMessages.length,
+      timestamp: Date.now()
     };
     
   } catch (error) {

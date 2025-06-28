@@ -130,7 +130,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
           messages: [
             {
               role: 'system',
-              content: getAgentSystemPrompt(personality)
+              content: await getAgentSystemPrompt(personality)
             },
             {
               role: 'user',
@@ -174,7 +174,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
             
             // Check if this is a send_messages response (messages already sent)
             if (toolResult && typeof toolResult === 'object' && toolResult.__MESSAGES_SENT__) {
-              Logger.log(`Messages already sent (${toolResult.count}), ending loop`);
+              Logger.log(`[MESSAGES_SENT_FLAG] Detected: ${toolResult.count} messages sent, ending loop. Timestamp: ${toolResult.timestamp}`);
               messagesSent = true;
               
               // Delete the status message since responses have been sent
@@ -596,7 +596,45 @@ Ready to help with factual, evidence-based responses! 🤖`;
 
     await TelegramAPI.sendMessage(chatId, introMessage);
     Logger.log(`Introduction sent successfully to chat ${chatId}`);
+    
+    // Notify admin about new chat
+    await notifyAdminNewChat(chatId, chat);
   } catch (error) {
     Logger.log(`Error sending introduction to chat ${chatId}: ${error.message}`, 'error');
+  }
+}
+
+/**
+ * Notify admin when bot is added to a new chat or starts new conversation
+ * @param {string|number} chatId - The chat ID
+ * @param {Object} chat - The chat object with details
+ */
+async function notifyAdminNewChat(chatId, chat) {
+  try {
+    const chatType = chat.type === 'private' ? 'Private Chat' : 'Group';
+    const chatTitle = chat.title || `${chat.first_name || 'Unknown'} ${chat.last_name || ''}`.trim();
+    const memberCount = chat.type === 'group' || chat.type === 'supergroup' ? 
+      (chat.all_members_are_administrators ? 'All admins' : 'Unknown members') : '1:1 chat';
+    
+    const notificationMessage = `🆕 **New ${chatType} Added!**
+
+📋 **Chat Details:**
+• **Name**: ${chatTitle}
+• **ID**: \`${chatId}\`
+• **Type**: ${chat.type}
+• **Members**: ${memberCount}
+• **Time**: ${new Date().toLocaleString()}
+
+${chat.type === 'private' ? '👤 Started new private conversation' : '👥 Added to new group chat'}
+
+_Bot introduction sent successfully!_`;
+
+    await TelegramAPI.sendMessage(CONFIG.ADMIN_CHAT_ID, notificationMessage, {
+      parse_mode: 'Markdown'
+    });
+    
+    Logger.log(`Admin notification sent for new chat: ${chatId} (${chatTitle})`);
+  } catch (error) {
+    Logger.log(`Failed to send admin notification for chat ${chatId}: ${error.message}`, 'warn');
   }
 }

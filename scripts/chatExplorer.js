@@ -150,18 +150,18 @@ async function viewUserMessages(chatId) {
       console.log(chalk.red('No messages found for this user.'));
     } else {
       const table = new Table({
-        head: [chalk.cyan('#'), chalk.cyan('Type'), chalk.cyan('Time'), chalk.cyan('Message')],
-        colWidths: [4, 6, 12, 80],
+        head: [chalk.cyan('#'), chalk.cyan('Sender'), chalk.cyan('Time'), chalk.cyan('Message')],
+        colWidths: [4, 15, 12, 70],
         wordWrap: true
       });
 
       messages.forEach((msg, index) => {
         const date = new Date(msg.timestamp).toLocaleTimeString();
-        const type = msg.role === 'user' ? '👤' : '🤖';
+        const sender = msg.isBot ? 'Bot' : (msg.senderName || 'Unknown');
         const content = msg.content.length > 70 ? 
           msg.content.substring(0, 70) + '...' : msg.content;
         
-        table.push([index + 1, type, date, content]);
+        table.push([index + 1, sender, date, content]);
       });
 
       console.log(chalk.green(`Last ${messages.length} messages:\n`));
@@ -215,7 +215,9 @@ async function getRecentMessages(chatId, limit = 20) {
       role: msg.isBot ? 'assistant' : 'user',
       timestamp: msg.timestamp?.unix || Date.now(),
       messageId: msg.messageId,
-      from: msg.message_from
+      from: msg.message_from,
+      senderName: typeof msg.message_from === 'string' ? msg.message_from : 'Unknown',
+      isBot: msg.isBot
     }));
   } catch (error) {
     console.error('Error getting messages:', error.message);
@@ -255,7 +257,9 @@ async function searchMessages() {
         results.push({
           ...msg,
           userName: user.name,
-          userId: user.id
+          userId: user.id,
+          senderName: msg.senderName,
+          isBot: msg.isBot
         });
       });
     }
@@ -266,11 +270,11 @@ async function searchMessages() {
       console.log(`Found ${results.length} results:\n`);
       results.slice(0, 10).forEach((msg, index) => {
         const date = new Date(msg.timestamp).toLocaleString();
-        const type = msg.role === 'user' ? '👤' : '🤖';
+        const sender = msg.isBot ? 'Bot' : (msg.senderName || 'Unknown');
         const content = msg.content && msg.content.length > 80 ? 
           msg.content.substring(0, 80) + '...' : (msg.content || '[No content]');
         
-        console.log(`${index + 1}. ${type} ${msg.userName} [${date}]`);
+        console.log(`${index + 1}. ${sender} in ${msg.userName} [${date}]`);
         console.log(`   ${content}\n`);
       });
 
@@ -315,9 +319,9 @@ async function searchInUserChat(chatId) {
       console.log(`Found ${results.length} results:\n`);
       results.forEach((msg, index) => {
         const date = new Date(msg.timestamp).toLocaleString();
-        const type = msg.role === 'user' ? '👤' : '🤖';
+        const sender = msg.isBot ? 'Bot' : (msg.senderName || 'Unknown');
         
-        console.log(`${index + 1}. ${type} [${date}]`);
+        console.log(`${index + 1}. ${sender} [${date}]`);
         console.log(`   ${msg.content || '[No content]'}\n`);
       });
     }

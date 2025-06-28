@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Everything Bot - AI Assistant for Group Chats | Fantasy Sports, Gaming & More</title>
-    <meta name="description" content="The only Telegram bot that actually transcribes audio, analyzes videos, remembers everything & switches personalities! Perfect for fantasy football, college groups, work teams & friend chats. 100% FREE!">
-    <meta name="keywords" content="Telegram bot, AI assistant, group chat bot, fantasy football bot, voice transcription, video analysis, memory bot, personality bot, college chat, gaming bot, free AI bot">
+    <title>Everything Bot - AI Agent for Teams & Groups | Fantasy Sports, Gaming & More</title>
+    <meta name="description" content="The ultimate AI agent for teams & groups! Transcribes audio, analyzes videos, remembers everything & switches personalities to keep conversations flowing. Perfect for fantasy football, college groups, work teams & friend chats. 100% FREE!">
+    <meta name="keywords" content="AI agent, team bot, group chat AI, Telegram bot, AI assistant, fantasy football bot, voice transcription, video analysis, memory bot, personality bot, college chat, gaming bot, free AI bot">
     <meta name="author" content="Daniel Nakhla">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dnakhla.github.io/Everything-Bot/">
-    <meta property="og:title" content="Everything Bot - The Ultimate AI Assistant for Group Chats">
-    <meta property="og:description" content="🎤 Transcribes audio instantly 📸 Analyzes videos & images 🧠 Remembers everything 🎭 Switches personalities on command. Perfect for fantasy sports, college groups & friend chats. FREE!">
+    <meta property="og:title" content="Everything Bot - The Ultimate AI Agent for Teams & Groups">
+    <meta property="og:description" content="🤖 AI Agent that keeps conversations flowing! 🎤 Transcribes audio 📸 Analyzes videos 🧠 Remembers everything 🎭 Switches personalities. Perfect for teams, fantasy sports & friend groups. FREE!">
     <meta property="og:image" content="https://dnakhla.github.io/Everything-Bot/assets/social-preview.jpg">
     <meta property="og:image:width" content="480">
     <meta property="og:image:height" content="1071">
@@ -722,13 +722,13 @@
                 </div>
                 
                 <p class="hero-subtitle">
-                    The ONLY Telegram Bot That Actually Transcribes Audio, Analyzes Media, Searches the Web & Remembers Everything! 
+                    Your AI Agent That Keeps Team Conversations Flowing! Searches the Web, Transcribes Audio, Analyzes Media & Remembers Everything. Only Interrupts When Summoned - Never Spams Your Chat.
                 </p>
 
                 <div class="feature-bubbles">
                     <div class="feature-bubble voice">🎤 "robot transcribe this 5-minute audio" → Perfect Speech-to-Text</div>
-                    <div class="feature-bubble search">🔍 "robot summarize last 200 messages about vacation plans" → Smart Analysis</div>
-                    <div class="feature-bubble video">🎬 "analyze-bot what happens in this 30-second TikTok?" → Frame-by-Frame Insights</div>
+                    <div class="feature-bubble search">🌐 "robot search latest NFL trade rumors" → Live Web Results</div>
+                    <div class="feature-bubble video">🔍 "robot summarize last 200 messages about vacation plans" → Smart Analysis</div>
                     <div class="feature-bubble image">📸 "robot find my Walmart headphone receipt from last month" → Visual Memory Search</div>
                     <div class="feature-bubble persona">💾 "memory-bot what did Sarah say about the budget meeting 2 weeks ago?" → Conversation Intelligence</div>
                 </div>
@@ -741,12 +741,20 @@
             <!-- Right Side: Live Demo Video -->
             <div class="hero-video">
                 <div class="video-header">
-                    <h2 class="video-title">Add to Your Group Chat!</h2>
+                    <h2 class="video-title"><a href="https://t.me/LetMeCheckThatBot" style="color: inherit; text-decoration: none;">Add to Your Group Chat!</a></h2>
                     <p class="video-subtitle">See it working live:</p>
                 </div>
                 <div class="video-container">
-                    <div class="video-frame">
-                        <img src="assets/demo-everything-bot.gif" alt="Live Demo of Everything Bot in Telegram" class="demo-gif">
+                    <div class="video-frame" style="position: relative;">
+                        <video autoplay muted loop playsinline class="demo-video" onclick="toggleVideoPlayback(this)" style="width: 100%; height: auto; border-radius: 1rem; box-shadow: 0 1rem 2rem rgba(0,0,0,0.3); cursor: pointer;">
+                            <source src="assets/demo-hero-video-full.mp4" type="video/mp4">
+                            <img src="assets/demo-everything-bot.gif" alt="Live Demo of Everything Bot in Telegram" class="demo-gif">
+                        </video>
+                        <div class="video-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; border-radius: 1rem; cursor: pointer;" onclick="toggleVideoPlayback(this.previousElementSibling)">
+                            <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 0; height: 0; border-left: 25px solid #333; border-top: 15px solid transparent; border-bottom: 15px solid transparent; margin-left: 8px;"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -924,6 +932,17 @@
                 observer.observe(card);
             });
         });
+
+        function toggleVideoPlayback(video) {
+            const overlay = video.nextElementSibling;
+            if (video.paused) {
+                video.play();
+                overlay.style.display = 'none';
+            } else {
+                video.pause();
+                overlay.style.display = 'flex';
+            }
+        }
     </script>
 </body>
 </html>

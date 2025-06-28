@@ -155,6 +155,7 @@ fi
 mkdir -p $DEPLOY_DIR
 mkdir -p $DEPLOY_DIR/services
 mkdir -p $DEPLOY_DIR/src
+mkdir -p $DEPLOY_DIR/src/tools
 mkdir -p $DEPLOY_DIR/utils
 mkdir -p $DEPLOY_DIR/tools
 
@@ -162,6 +163,7 @@ echo -e "${YELLOW}Copying project files...${NC}"
 cp index.js config.js package.json package-lock.json $DEPLOY_DIR/
 cp services/*.js $DEPLOY_DIR/services/
 cp src/*.js $DEPLOY_DIR/src/
+cp src/tools/*.js $DEPLOY_DIR/src/tools/
 cp utils/*.js $DEPLOY_DIR/utils/
 cp tools/*.js $DEPLOY_DIR/tools/
 

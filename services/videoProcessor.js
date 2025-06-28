@@ -188,7 +188,7 @@ export async function analyzeVideoFrames(frames, metadata, openai) {
               content: [
                 {
                   type: "text",
-                  text: `Describe this frame from a ${metadata.originalDuration}s ${metadata.mimeType === 'video/mp4' ? 'video' : 'GIF'} (frame ${i + 1}/${frames.length}). Focus on key visual elements, actions, objects, and people.`
+                  text: `Describe this frame from a ${metadata.originalDuration}s ${metadata.mimeType === 'video/mp4' ? 'video' : 'GIF'} (frame ${i + 1}/${frames.length}). ${metadata.mimeType === 'image/gif' ? 'This is likely a meme, reaction GIF, or animated content. Look for text, emotional expressions, humor, or meme elements.' : ''} Focus on key visual elements, actions, objects, people, and any text visible.`
                 },
                 {
                   type: "image_url",
@@ -215,7 +215,9 @@ export async function analyzeVideoFrames(frames, metadata, openai) {
     }
     
     // Create comprehensive analysis
-    const analysisHeader = `${metadata.mimeType === 'video/mp4' ? 'Video' : 'GIF'} Analysis (${metadata.originalDuration}s, ${frames.length} frames extracted):`;
+    const mediaType = metadata.mimeType === 'video/mp4' ? 'Video' : 'GIF';
+    const memeContext = metadata.mimeType === 'image/gif' ? ' (Likely meme/reaction content)' : '';
+    const analysisHeader = `${mediaType} Analysis${memeContext} (${metadata.originalDuration}s, ${frames.length} frames extracted):`;
     const frameDescriptions = frameAnalyses.join('\n\n');
     
     return `${analysisHeader}\n\n${frameDescriptions}`;

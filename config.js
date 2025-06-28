@@ -17,6 +17,7 @@ export const CONFIG = {
   DEFAULT_SENSITIVITY: 75,
   SERPER_API_KEY: process.env.SERPER_API_KEY,
   BRAVE_API_KEY: process.env.BRAVE_API_KEY,
+  ADMIN_CHAT_ID: process.env.ADMIN_CHAT_ID || '1716676964', // Default to your chat ID
   
   // Feature flags
   ENABLE_BROWSER_TOOL: process.env.ENABLE_BROWSER_TOOL === 'true',

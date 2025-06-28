@@ -22,7 +22,7 @@ Everything Bot is an intelligent Telegram assistant that revolutionizes how team
 ### **Core Lambda Implementation**
 - **AWS Lambda** - Main application runtime (Node.js 18.x)
 - **Lambda Layers** - FFmpeg for media processing
-- **EventBridge** - Scheduled conversation summaries
+- **API Gateway** - HTTPS webhook for Telegram integration
 - **CloudWatch Logs** - Monitoring and debugging
 
 ### **Storage & Data**
@@ -45,9 +45,9 @@ Everything Bot is an intelligent Telegram assistant that revolutionizes how team
 ## 🔧 **How AWS Lambda Powers the Solution**
 
 ### **Lambda Triggers**
-1. **HTTPS API Gateway** - Webhook for incoming Telegram messages
-2. **EventBridge Schedule** - Daily conversation summaries
-3. **S3 Events** - Process uploaded media files
+1. **API Gateway HTTPS** - Webhook for incoming Telegram messages
+2. **S3 Events** - Process uploaded media files
+3. **CloudWatch Events** - Scheduled conversation summaries
 
 ### **Serverless Best Practices**
 ```javascript
