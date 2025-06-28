@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test:syntax": "find . -name '*.js' -not -path '*/node_modules/*' -not -path '*/tests/*' -exec node --check {} \\; && echo 'All files are syntactically valid'",
     "list-conversations": "node scripts/listConversationsContent.js",
+    "explorer": "node scripts/chatExplorer.js",
     "delete-conversations": "source .env && aws s3 rm s3://${S3_BUCKET_NAME}/fact_checker_bot/groups/ --recursive",
     "log-viewer": "node scripts/logViewer.js",
     "chat-explorer": "node scripts/chatExplorer.js"

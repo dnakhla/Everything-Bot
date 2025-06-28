@@ -11,28 +11,23 @@ Comprehensive overview of the system architecture including:
 - Technology stack breakdown
 - Business impact analysis
 
-### 2. **system-architecture.puml**
-PlantUML diagram showing the complete system architecture with AWS infrastructure components.
+### 2. **system-architecture.md**
+Mermaid diagram showing the complete system architecture with AWS infrastructure components.
 
-### 3. **agent-sequence.puml**
+### 3. **agent-sequence.md**
 Detailed sequence diagram illustrating multi-agent interactions and coordination.
 
-### 4. **agent-decision-tree.puml**
+### 4. **agent-decision-tree.md**
 Decision tree flowchart showing how the system selects and coordinates different AI agents.
 
 ## 🔧 Viewing the Diagrams
 
 ### Mermaid Diagrams
-The Mermaid diagrams in `architecture.md` can be viewed in:
-- GitHub (native support)
-- VS Code with Mermaid extension
-- Online at [mermaid.live](https://mermaid.live/)
-
-### PlantUML Diagrams
-The PlantUML diagrams can be viewed using:
-- VS Code with PlantUML extension
-- Online at [plantuml.com](http://plantuml.com/plantuml)
-- IntelliJ IDEA with PlantUML integration
+All diagrams are now in Mermaid format and can be viewed in:
+- **GitHub** (native support - diagrams render automatically)
+- **VS Code** with Mermaid extension
+- **Online** at [mermaid.live](https://mermaid.live/)
+- **Obsidian**, **Notion**, and other modern documentation tools
 
 ## 🏗 Architecture Highlights
 
