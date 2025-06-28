@@ -83,6 +83,11 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
       'Processing your question...',
       { reply_to_message_id: request_message_id }
     );
+    
+    // Save the initial processing message
+    if (fetchingMessage) {
+      await saveBotMessage(chatId, fetchingMessage);
+    }
 
     // Get recent conversation context
     const messages = await getMessagesFromLastNhours(chatId, 24);
@@ -215,11 +220,9 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
         'I was unable to complete your request within the time limit. Please try a simpler question.');
     }
 
-    // Save interaction to message history
+    // Save user interaction to message history  
     await saveUserMessage(chatId, user_query, 'user');
-    if (finalResponse) {
-      await saveBotMessage(chatId, finalResponse, 'assistant');
-    }
+    // Note: Bot messages are now saved in sendFinalMessages() function
 
   } catch (error) {
     Logger.log(`Error in handleRobotQuery: ${error.message}`, 'error');
@@ -259,20 +262,29 @@ async function sendFinalMessages(chatId, messages, fetchingMessage, replyToMessa
 
     for (let i = 0; i < messageArray.length; i++) {
       const message = messageArray[i];
+      let sentMessage = null;
       
       if (i === 0 && fetchingMessage) {
         // Edit the first message
-        await safeEditMessage(chatId, fetchingMessage.message_id, message, {
+        sentMessage = await safeEditMessage(chatId, fetchingMessage.message_id, message, {
           parse_mode: 'Markdown',
           disable_web_page_preview: false
         });
+        // For edited messages, we already have the message stored, so update it
+        if (sentMessage) {
+          await saveBotMessage(chatId, sentMessage);
+        }
       } else {
         // Send additional messages with staggered timing
-        await TelegramAPI.sendMessage(chatId, message, {
+        sentMessage = await TelegramAPI.sendMessage(chatId, message, {
           parse_mode: 'Markdown',
           reply_to_message_id: replyToMessageId,
           disable_web_page_preview: false
         });
+        // Save each new message to S3
+        if (sentMessage) {
+          await saveBotMessage(chatId, sentMessage);
+        }
       }
       
       // Stagger messages with increasing delay for natural conversation feel
@@ -367,7 +379,10 @@ Add personality hints like:
 
 The bot remembers context and can reference previous conversations. Just ask naturally!`;
 
-  await TelegramAPI.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
+  const helpMessage = await TelegramAPI.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
+  if (helpMessage) {
+    await saveBotMessage(chatId, helpMessage);
+  }
 }
 
 /**
@@ -440,18 +455,26 @@ export async function handleClearMessagesCommand(chatId, count = 1) {
     // Validate count parameter
     const numToDelete = Math.max(1, Math.min(count, 20)); // Limit between 1 and 20
     
-    await TelegramAPI.sendMessage(chatId, `🗑️ Deleting last ${numToDelete} bot message${numToDelete > 1 ? 's' : ''}...`);
+    const statusMessage = await TelegramAPI.sendMessage(chatId, `🗑️ Deleting last ${numToDelete} bot message${numToDelete > 1 ? 's' : ''}...`);
+    if (statusMessage) {
+      await saveBotMessage(chatId, statusMessage);
+    }
     
     const { deletedFromTelegram, deletedFromS3 } = await deleteBotMessages(chatId, numToDelete);
     
+    let resultMessage;
     if (deletedFromTelegram > 0 || deletedFromS3 > 0) {
-      await TelegramAPI.sendMessage(chatId, 
+      resultMessage = await TelegramAPI.sendMessage(chatId, 
         `✅ Deleted ${deletedFromTelegram} message${deletedFromTelegram !== 1 ? 's' : ''} from Telegram and ${deletedFromS3} from storage.`
       );
     } else {
-      await TelegramAPI.sendMessage(chatId, 
+      resultMessage = await TelegramAPI.sendMessage(chatId, 
         '💭 No recent bot messages found to delete.'
       );
+    }
+    
+    if (resultMessage) {
+      await saveBotMessage(chatId, resultMessage);
     }
   } catch (error) {
     Logger.log(`Error in handleClearMessagesCommand: ${error.message}`, 'error');

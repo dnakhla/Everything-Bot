@@ -41,7 +41,6 @@ graph TB
         LAMBDA[⚡ Lambda Function<br/>Node.js Runtime]
         S3[🗄️ S3 Storage<br/>Conversation History<br/>Media Files]
         CW[📊 CloudWatch<br/>Logs & Monitoring]
-        EB[⏰ EventBridge<br/>Scheduled Tasks]
     end
     
     subgraph "Core Processing"
@@ -58,7 +57,6 @@ graph TB
     TOOLS --> WEB
     LAMBDA <--> S3
     LAMBDA --> CW
-    EB --> LAMBDA
     LAMBDA -->|Response| TG
     
     %% Styling
@@ -66,7 +64,7 @@ graph TB
     classDef external fill:#4285f4,stroke:#1a73e8,stroke-width:2px,color:#fff
     classDef processing fill:#34a853,stroke:#137333,stroke-width:2px,color:#fff
     
-    class APIGW,LAMBDA,S3,CW,EB aws
+    class APIGW,LAMBDA,S3,CW aws
     class TG,OAI,WEB external
     class AGENT,TOOLS processing
 ```
