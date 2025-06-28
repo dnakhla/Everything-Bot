@@ -32,8 +32,9 @@ class Analytics {
    */
   static async sendToGA(eventName, parameters) {
     try {
+      const { CONFIG } = await import('../config.js');
       const measurementId = 'G-VB38RTLPZM';
-      const apiSecret = process.env.GA_API_SECRET; // Add this to your environment variables
+      const apiSecret = CONFIG.GA_API_SECRET;
       
       if (!apiSecret) {
         Logger.log('GA_API_SECRET not configured, skipping GA tracking', 'warn');
