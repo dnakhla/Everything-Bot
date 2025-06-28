@@ -3,6 +3,7 @@
  */
 
 import { Logger } from '../utils/logger.js';
+import crypto from 'crypto';
 
 class Analytics {
   /**
@@ -79,7 +80,7 @@ class Analytics {
    */
   static generateClientId(chatId) {
     // Generate a consistent but anonymous client ID
-    const hash = require('crypto').createHash('sha256').update(chatId.toString()).digest('hex');
+    const hash = crypto.createHash('sha256').update(chatId.toString()).digest('hex');
     return hash.substring(0, 16) + '.' + hash.substring(16, 26);
   }
 
@@ -185,7 +186,7 @@ class Analytics {
    */
   static hashChatId(chatId) {
     if (!chatId) return 'unknown';
-    const hash = require('crypto').createHash('sha256').update(chatId.toString()).digest('hex');
+    const hash = crypto.createHash('sha256').update(chatId.toString()).digest('hex');
     return hash.substring(0, 8); // First 8 characters for analytics
   }
 }
