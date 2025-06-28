@@ -11,8 +11,6 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 
-const s3 = new S3Manager();
-
 console.log(chalk.blue.bold('\n🤖 Everything Bot - Chat Explorer'));
 console.log(chalk.gray('=====================================\n'));
 
@@ -55,20 +53,20 @@ async function listUsers() {
   try {
     console.log(chalk.yellow('\n📋 Loading users...\n'));
     
-    const result = await s3.listObjects('');
+    const result = await S3Manager.listObjects('fact_checker_bot/groups/');
     const chatIds = new Set();
     
-    // Extract unique chat IDs from object keys
+    // Extract unique chat IDs from object keys like: fact_checker_bot/groups/12345.json
     result.Contents?.forEach(obj => {
-      const parts = obj.Key.split('/');
-      if (parts.length >= 2) {
-        chatIds.add(parts[1]); // chat-{chatId}
+      if (obj.Key.endsWith('.json')) {
+        const fileName = obj.Key.split('/').pop();
+        const chatId = fileName.replace('.json', '');
+        chatIds.add(chatId);
       }
     });
 
     users = Array.from(chatIds).map(chatId => {
-      const id = chatId.replace('chat-', '');
-      return { id, name: `User ${id}` };
+      return { id: chatId, name: `Chat ${chatId}` };
     });
 
     if (users.length === 0) {
@@ -176,33 +174,27 @@ async function viewUserMessages(chatId) {
 // Get recent messages for a chat
 async function getRecentMessages(chatId, limit = 20) {
   try {
-    const messages = [];
+    // Load the chat file from the new storage format
+    const key = `fact_checker_bot/groups/${chatId}.json`;
+    const chatData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
     
-    // List all message files for this chat
-    const result = await s3.listObjects(`messages/chat-${chatId}/`);
-    
-    if (!result.Contents) return messages;
-
-    // Sort by last modified and take recent ones
-    const sortedFiles = result.Contents
-      .filter(obj => obj.Key.endsWith('.json'))
-      .sort((a, b) => new Date(b.LastModified) - new Date(a.LastModified))
-      .slice(0, limit);
-
-    // Load each message
-    for (const file of sortedFiles) {
-      try {
-        const data = await s3.getObject(file.Key);
-        if (data) {
-          const message = JSON.parse(data);
-          messages.push(message);
-        }
-      } catch (err) {
-        console.log(`Skipping corrupted file: ${file.Key}`);
-      }
+    if (!chatData || !chatData.messages) {
+      return [];
     }
 
-    return messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    // Sort messages by timestamp and get recent ones
+    const sortedMessages = chatData.messages
+      .sort((a, b) => (b.timestamp?.unix || 0) - (a.timestamp?.unix || 0))
+      .slice(0, limit);
+
+    // Convert to the expected format for the UI
+    return sortedMessages.map(msg => ({
+      content: msg.message_text || '[No content]',
+      role: msg.isBot ? 'assistant' : 'user',
+      timestamp: msg.timestamp?.unix || Date.now(),
+      messageId: msg.messageId,
+      from: msg.message_from
+    }));
   } catch (error) {
     console.error('Error getting messages:', error.message);
     return [];
@@ -211,95 +203,107 @@ async function getRecentMessages(chatId, limit = 20) {
 
 // Search messages
 async function searchMessages() {
-  rl.question('\nEnter search term: ', async (term) => {
-    if (!term.trim()) {
-      console.log('Please enter a search term.');
-      showMenu();
-      return;
+  const { term } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'term',
+      message: 'Enter search term:'
     }
+  ]);
 
-    console.log(`\n🔍 Searching for "${term}"...\n`);
+  if (!term.trim()) {
+    console.log('Please enter a search term.');
+    await showMenu();
+    return;
+  }
 
-    try {
-      const results = [];
+  console.log(`\n🔍 Searching for "${term}"...\n`);
+
+  try {
+    const results = [];
+    
+    // Search across all users
+    for (const user of users) {
+      const messages = await getRecentMessages(user.id, 100);
+      const matches = messages.filter(msg => 
+        msg.content && msg.content.toLowerCase().includes(term.toLowerCase())
+      );
       
-      // Search across all users
-      for (const user of users) {
-        const messages = await getRecentMessages(user.id, 100);
-        const matches = messages.filter(msg => 
-          msg.content.toLowerCase().includes(term.toLowerCase())
-        );
-        
-        matches.forEach(msg => {
-          results.push({
-            ...msg,
-            userName: user.name,
-            userId: user.id
-          });
+      matches.forEach(msg => {
+        results.push({
+          ...msg,
+          userName: user.name,
+          userId: user.id
         });
-      }
-
-      if (results.length === 0) {
-        console.log('No messages found containing that term.');
-      } else {
-        console.log(`Found ${results.length} results:\n`);
-        results.slice(0, 10).forEach((msg, index) => {
-          const date = new Date(msg.timestamp).toLocaleString();
-          const type = msg.role === 'user' ? '👤' : '🤖';
-          const content = msg.content.length > 80 ? 
-            msg.content.substring(0, 80) + '...' : msg.content;
-          
-          console.log(`${index + 1}. ${type} ${msg.userName} [${date}]`);
-          console.log(`   ${content}\n`);
-        });
-
-        if (results.length > 10) {
-          console.log(`... and ${results.length - 10} more results`);
-        }
-      }
-    } catch (error) {
-      console.error('Search error:', error.message);
+      });
     }
 
-    showMenu();
-  });
+    if (results.length === 0) {
+      console.log('No messages found containing that term.');
+    } else {
+      console.log(`Found ${results.length} results:\n`);
+      results.slice(0, 10).forEach((msg, index) => {
+        const date = new Date(msg.timestamp).toLocaleString();
+        const type = msg.role === 'user' ? '👤' : '🤖';
+        const content = msg.content && msg.content.length > 80 ? 
+          msg.content.substring(0, 80) + '...' : (msg.content || '[No content]');
+        
+        console.log(`${index + 1}. ${type} ${msg.userName} [${date}]`);
+        console.log(`   ${content}\n`);
+      });
+
+      if (results.length > 10) {
+        console.log(`... and ${results.length - 10} more results`);
+      }
+    }
+  } catch (error) {
+    console.error('Search error:', error.message);
+  }
+
+  await showMenu();
 }
 
 // Search in specific user chat
 async function searchInUserChat(chatId) {
-  rl.question('\nEnter search term: ', async (term) => {
-    if (!term.trim()) {
-      console.log('Please enter a search term.');
-      await viewUserMessages(chatId);
-      return;
+  const { term } = await inquirer.prompt([
+    {
+      type: 'input',
+      name: 'term',
+      message: 'Enter search term:'
     }
+  ]);
 
-    console.log(`\n🔍 Searching in ${selectedUser.name}'s chat for "${term}"...\n`);
-
-    try {
-      const messages = await getRecentMessages(chatId, 200);
-      const results = messages.filter(msg => 
-        msg.content.toLowerCase().includes(term.toLowerCase())
-      );
-
-      if (results.length === 0) {
-        console.log('No messages found containing that term.');
-      } else {
-        console.log(`Found ${results.length} results:\n`);
-        results.forEach((msg, index) => {
-          const date = new Date(msg.timestamp).toLocaleString();
-          const type = msg.role === 'user' ? '👤' : '🤖';
-          
-          console.log(`${index + 1}. ${type} [${date}]`);
-          console.log(`   ${msg.content}\n`);
-        });
-      }
-    } catch (error) {
-      console.error('Search error:', error.message);
-    }
-
+  if (!term.trim()) {
+    console.log('Please enter a search term.');
     await viewUserMessages(chatId);
-  });
+    return;
+  }
+
+  console.log(`\n🔍 Searching in ${selectedUser.name}'s chat for "${term}"...\n`);
+
+  try {
+    const messages = await getRecentMessages(chatId, 200);
+    const results = messages.filter(msg => 
+      msg.content && msg.content.toLowerCase().includes(term.toLowerCase())
+    );
+
+    if (results.length === 0) {
+      console.log('No messages found containing that term.');
+    } else {
+      console.log(`Found ${results.length} results:\n`);
+      results.forEach((msg, index) => {
+        const date = new Date(msg.timestamp).toLocaleString();
+        const type = msg.role === 'user' ? '👤' : '🤖';
+        
+        console.log(`${index + 1}. ${type} [${date}]`);
+        console.log(`   ${msg.content || '[No content]'}\n`);
+      });
+    }
+  } catch (error) {
+    console.error('Search error:', error.message);
+  }
+
+  await viewUserMessages(chatId);
 }
 
 // Show recent activity
@@ -314,7 +318,7 @@ async function showRecentActivity() {
     for (const user of users) {
       const messages = await getRecentMessages(user.id, 50);
       const recentMessages = messages.filter(msg => 
-        new Date(msg.timestamp).getTime() > oneDayAgo
+        msg.timestamp > oneDayAgo
       );
 
       if (recentMessages.length > 0) {
@@ -322,7 +326,7 @@ async function showRecentActivity() {
           user: user.name,
           userId: user.id,
           messageCount: recentMessages.length,
-          lastMessage: recentMessages[recentMessages.length - 1]
+          lastMessage: recentMessages[0] // Most recent first due to sorting
         });
       }
     }
@@ -332,7 +336,7 @@ async function showRecentActivity() {
     } else {
       activity.sort((a, b) => b.messageCount - a.messageCount);
       
-      console.log('Most active users today:\n');
+      console.log('Most active chats today:\n');
       activity.forEach((item, index) => {
         const lastTime = new Date(item.lastMessage.timestamp).toLocaleTimeString();
         console.log(`${index + 1}. ${item.user} - ${item.messageCount} messages (last: ${lastTime})`);
@@ -342,7 +346,7 @@ async function showRecentActivity() {
     console.error('Error getting recent activity:', error.message);
   }
 
-  showMenu();
+  await showMenu();
 }
 
 // Show stats
@@ -385,7 +389,7 @@ async function showStats() {
 async function init() {
   try {
     // Test S3 connection
-    await s3.listObjects('');
+    await S3Manager.listObjects('fact_checker_bot/groups/');
     console.log('✅ Connected to S3 storage\n');
     
     // Load users initially
