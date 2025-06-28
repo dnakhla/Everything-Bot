@@ -7,6 +7,7 @@
  */
 
 import { Logger } from '../utils/logger.js';
+import { Analytics } from '../services/analytics.js';
 import { 
   search,
   messages,
@@ -36,36 +37,62 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
     });
     
     const executionPromise = (async () => {
-      switch (functionName) {
-        case 'search':
-          return await executeSearchTool(functionArgs, chatId);
+      const startTime = Date.now();
+      let success = true;
+      let result;
+      
+      try {
+        switch (functionName) {
+          case 'search':
+            result = await executeSearchTool(functionArgs, chatId);
+            break;
+            
+          case 'messages':
+            result = await executeMessagesTool(functionArgs, chatId);
+            break;
+            
+          case 'images':
+            result = await executeImagesTool(functionArgs, chatId);
+            break;
+            
+          case 'calculate':
+            result = await executeCalculateTool(functionArgs);
+            break;
+            
+          case 'analyze':
+            result = await executeAnalyzeTool(functionArgs);
+            break;
+            
+          case 'fetch_url':
+            result = await executeFetchUrlTool(functionArgs);
+            break;
+            
+          case 'browser':
+            result = await executeBrowserTool(functionArgs, chatId);
+            break;
+            
+          case 'analyze_image':
+            result = await executeAnalyzeImageTool(functionArgs, chatId);
+            break;
           
-        case 'messages':
-          return await executeMessagesTool(functionArgs, chatId);
-          
-        case 'images':
-          return await executeImagesTool(functionArgs, chatId);
-          
-        case 'calculate':
-          return await executeCalculateTool(functionArgs);
-          
-        case 'analyze':
-          return await executeAnalyzeTool(functionArgs);
-          
-        case 'fetch_url':
-          return await executeFetchUrlTool(functionArgs);
-          
-        case 'browser':
-          return await executeBrowserTool(functionArgs, chatId);
-          
-        case 'analyze_image':
-          return await executeAnalyzeImageTool(functionArgs, chatId);
-          
-        case 'send_messages':
-          return await executeSendMessagesTool(functionArgs, chatId);
-          
-        default:
-          throw new Error(`Unknown tool function: ${functionName}`);
+          case 'send_messages':
+            result = await executeSendMessagesTool(functionArgs, chatId);
+            break;
+            
+          default:
+            throw new Error(`Unknown tool function: ${functionName}`);
+        }
+        
+        // Track successful tool usage
+        const executionTime = Date.now() - startTime;
+        Analytics.trackToolUsage(functionName, true, executionTime);
+        return result;
+        
+      } catch (error) {
+        success = false;
+        const executionTime = Date.now() - startTime;
+        Analytics.trackToolUsage(functionName, false, executionTime);
+        throw error;
       }
     })();
     
@@ -185,6 +212,7 @@ async function executeSendMessagesTool(args, chatId) {
   const { messages } = args;
   
   Logger.log(`[SEND_MESSAGES] Starting: ${messages.length} messages, chatId: ${chatId}`);
+  Analytics.trackMessageSent(chatId, messages.length);
   
   // Import here to avoid circular dependency
   const telegramModule = await import('../services/telegramAPI.js');

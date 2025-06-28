@@ -2,6 +2,7 @@ import { S3Manager } from './s3Manager.js';
 import { CONFIG } from '../config.js';
 import { Logger } from '../utils/logger.js';
 import { processVideo } from './videoProcessor.js';
+import { Analytics } from './analytics.js';
 import axios from 'axios';
 
 /**
@@ -237,6 +238,15 @@ export async function saveUserMessage(chatId, message) {
     
     // Check if this is a new conversation (first user message)
     const isNewConversation = existingData.messages.length === 0;
+    
+    // Track message received
+    const messageType = message.voice ? 'voice' : 
+                       message.video ? 'video' : 
+                       message.animation ? 'gif' : 
+                       message.photo ? 'photo' : 
+                       message.document ? 'document' : 'text';
+    const hasAttachments = !!(message.voice || message.video || message.animation || message.photo || message.document);
+    Analytics.trackMessageReceived(chatId, messageType, hasAttachments);
         
     // Create base message entry
     const messageEntry = {
@@ -283,6 +293,7 @@ export async function saveUserMessage(chatId, message) {
           const { OpenAI } = await import('openai');
           const openai = new OpenAI({ apiKey: CONFIG.OPENAI_API_KEY });
           
+          Analytics.trackLLMCall("gpt-4.1-mini", "image_analysis");
           const response = await openai.chat.completions.create({
             model: "gpt-4.1-mini",
             messages: [
@@ -307,6 +318,7 @@ export async function saveUserMessage(chatId, message) {
           });
           
           const imageDescription = response.choices[0].message.content;
+          Analytics.trackImageAnalysis('photo', 'general_description', true);
           Logger.log(`Image analyzed successfully for message ${message.message_id}`);
           
           // Save only the description (not the base64 data)
@@ -741,6 +753,7 @@ export async function saveUserMessage(chatId, message) {
     
     // Notify admin if this is a new conversation
     if (isNewConversation) {
+      Analytics.trackNewConversation(chatId, message.chat.type);
       await notifyAdminNewConversation(chatId, message);
     }
   } catch (error) {

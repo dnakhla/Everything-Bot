@@ -8,6 +8,7 @@
 import { OpenAI } from 'openai';
 import { Logger } from '../utils/logger.js';
 import { CONFIG } from '../config.js';
+import { Analytics } from '../services/analytics.js';
 import { TelegramAPI } from '../services/telegramAPI.js';
 import {
   saveUserMessage,
@@ -125,6 +126,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
         }
         
         // Call OpenAI API with tools
+        Analytics.trackLLMCall(CONFIG.GPT_MODEL, "agent_chat_completion");
         const response = await openai.chat.completions.create({
           model: CONFIG.GPT_MODEL,
           messages: [
