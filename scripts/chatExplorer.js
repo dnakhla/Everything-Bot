@@ -25,8 +25,8 @@ async function showMenu() {
       name: 'action',
       message: 'What would you like to do?',
       choices: [
-        { name: '👥 List all users', value: 'listUsers' },
-        { name: '💬 View user messages', value: 'viewMessages' },
+        { name: '💬 List all chats', value: 'listUsers' },
+        { name: '📄 View chat messages', value: 'viewMessages' },
         { name: '🔍 Search messages', value: 'search' },
         { name: '📊 Recent activity', value: 'activity' },
         { name: '📈 Show stats', value: 'stats' },
@@ -51,37 +51,57 @@ async function showMenu() {
 // List all users
 async function listUsers() {
   try {
-    console.log(chalk.yellow('\n📋 Loading users...\n'));
+    console.log(chalk.yellow('\n📋 Loading chats...\n'));
     
     const result = await S3Manager.listObjects('fact_checker_bot/groups/');
-    const chatIds = new Set();
+    users = [];
     
-    // Extract unique chat IDs from object keys like: fact_checker_bot/groups/12345.json
-    result.Contents?.forEach(obj => {
+    // Load each chat file to get the chat title
+    for (const obj of (result.Contents || [])) {
       if (obj.Key.endsWith('.json')) {
-        const fileName = obj.Key.split('/').pop();
-        const chatId = fileName.replace('.json', '');
-        chatIds.add(chatId);
+        try {
+          const fileName = obj.Key.split('/').pop();
+          const chatId = fileName.replace('.json', '');
+          
+          // Load chat data to get the title
+          const chatData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, obj.Key);
+          
+          let chatName = `Chat ${chatId}`;
+          if (chatData && chatData.messages && chatData.messages.length > 0) {
+            // Get chat title from the first message that has it
+            const messageWithTitle = chatData.messages.find(msg => msg.chat_title);
+            if (messageWithTitle && messageWithTitle.chat_title) {
+              chatName = messageWithTitle.chat_title;
+            }
+          }
+          
+          users.push({ 
+            id: chatId, 
+            name: chatName,
+            messageCount: chatData?.messages?.length || 0
+          });
+        } catch (error) {
+          console.log(`Skipping corrupted chat file: ${obj.Key}`);
+        }
       }
-    });
-
-    users = Array.from(chatIds).map(chatId => {
-      return { id: chatId, name: `Chat ${chatId}` };
-    });
+    }
 
     if (users.length === 0) {
-      console.log(chalk.red('No users found.'));
+      console.log(chalk.red('No chats found.'));
     } else {
       const table = new Table({
-        head: [chalk.cyan('ID'), chalk.cyan('User'), chalk.cyan('Chat ID')],
-        colWidths: [5, 20, 15]
+        head: [chalk.cyan('#'), chalk.cyan('Chat Name'), chalk.cyan('Chat ID'), chalk.cyan('Messages')],
+        colWidths: [4, 35, 15, 10]
       });
+
+      // Sort by message count (most active first)
+      users.sort((a, b) => b.messageCount - a.messageCount);
 
       users.forEach((user, index) => {
-        table.push([index + 1, user.name, user.id]);
+        table.push([index + 1, user.name, user.id, user.messageCount]);
       });
 
-      console.log(chalk.green(`Found ${users.length} users:\n`));
+      console.log(chalk.green(`Found ${users.length} chats:\n`));
       console.log(table.toString());
     }
     
@@ -92,10 +112,10 @@ async function listUsers() {
   }
 }
 
-// Select user and view messages
+// Select chat and view messages
 async function selectUserForMessages() {
   if (users.length === 0) {
-    console.log(chalk.red('\nNo users loaded. Please list users first.'));
+    console.log(chalk.red('\nNo chats loaded. Please list chats first.'));
     await showMenu();
     return;
   }
@@ -104,9 +124,9 @@ async function selectUserForMessages() {
     {
       type: 'list',
       name: 'user',
-      message: 'Select a user to view messages:',
+      message: 'Select a chat to view messages:',
       choices: users.map(user => ({
-        name: `${user.name} (ID: ${user.id})`,
+        name: `${user.name} (${user.messageCount} messages)`,
         value: user
       }))
     }
