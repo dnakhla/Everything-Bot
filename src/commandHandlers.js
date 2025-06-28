@@ -471,6 +471,27 @@ export async function handleClearMessagesCommand(chatId, count = 1) {
     
     const { deletedFromTelegram, deletedFromS3 } = await deleteBotMessages(chatId, numToDelete);
     
+    // Delete the status message immediately after deletion is complete
+    if (statusMessage) {
+      try {
+        await TelegramAPI.deleteMessage(chatId, statusMessage.message_id);
+        Logger.log(`Deleted status message ${statusMessage.message_id}`);
+        
+        // Remove from S3 storage  
+        const key = `fact_checker_bot/groups/${chatId}.json`;
+        const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
+        if (existingData && existingData.messages) {
+          existingData.messages = existingData.messages.filter(msg => 
+            msg.messageId !== statusMessage.message_id
+          );
+          await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
+          Logger.log(`Removed status message ${statusMessage.message_id} from S3`);
+        }
+      } catch (error) {
+        Logger.log(`Failed to delete status message: ${error.message}`, 'warn');
+      }
+    }
+    
     let resultMessage;
     if (deletedFromTelegram > 0 || deletedFromS3 > 0) {
       resultMessage = await TelegramAPI.sendMessage(chatId, 
@@ -484,6 +505,27 @@ export async function handleClearMessagesCommand(chatId, count = 1) {
     
     if (resultMessage) {
       await saveBotMessage(chatId, resultMessage);
+      
+      // Auto-delete the confirmation message after 2 seconds
+      setTimeout(async () => {
+        try {
+          await TelegramAPI.deleteMessage(chatId, resultMessage.message_id);
+          Logger.log(`Auto-deleted confirmation message ${resultMessage.message_id}`);
+          
+          // Also remove from S3 storage
+          const key = `fact_checker_bot/groups/${chatId}.json`;
+          const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
+          if (existingData && existingData.messages) {
+            existingData.messages = existingData.messages.filter(msg => 
+              msg.messageId !== resultMessage.message_id
+            );
+            await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
+            Logger.log(`Removed confirmation message ${resultMessage.message_id} from S3`);
+          }
+        } catch (error) {
+          Logger.log(`Failed to auto-delete confirmation message: ${error.message}`, 'warn');
+        }
+      }, 2000);
     }
   } catch (error) {
     Logger.log(`Error in handleClearMessagesCommand: ${error.message}`, 'error');
