@@ -260,31 +260,40 @@ async function sendFinalMessages(chatId, messages, fetchingMessage, replyToMessa
     
     Logger.log(`Sending ${messageArray.length} response messages`);
 
+    // Delete the processing message first if it exists
+    if (fetchingMessage) {
+      try {
+        await TelegramAPI.deleteMessage(chatId, fetchingMessage.message_id);
+        Logger.log(`Deleted processing message ${fetchingMessage.message_id}`);
+        
+        // Also remove from S3 storage
+        const key = `fact_checker_bot/groups/${chatId}.json`;
+        const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
+        if (existingData && existingData.messages) {
+          existingData.messages = existingData.messages.filter(msg => 
+            msg.messageId !== fetchingMessage.message_id
+          );
+          await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
+          Logger.log(`Removed processing message ${fetchingMessage.message_id} from S3`);
+        }
+      } catch (error) {
+        Logger.log(`Failed to delete processing message: ${error.message}`, 'warn');
+      }
+    }
+
     for (let i = 0; i < messageArray.length; i++) {
       const message = messageArray[i];
-      let sentMessage = null;
       
-      if (i === 0 && fetchingMessage) {
-        // Edit the first message
-        sentMessage = await safeEditMessage(chatId, fetchingMessage.message_id, message, {
-          parse_mode: 'Markdown',
-          disable_web_page_preview: false
-        });
-        // For edited messages, we already have the message stored, so update it
-        if (sentMessage) {
-          await saveBotMessage(chatId, sentMessage);
-        }
-      } else {
-        // Send additional messages with staggered timing
-        sentMessage = await TelegramAPI.sendMessage(chatId, message, {
-          parse_mode: 'Markdown',
-          reply_to_message_id: replyToMessageId,
-          disable_web_page_preview: false
-        });
-        // Save each new message to S3
-        if (sentMessage) {
-          await saveBotMessage(chatId, sentMessage);
-        }
+      // Send all messages as new messages (no more editing)
+      const sentMessage = await TelegramAPI.sendMessage(chatId, message, {
+        parse_mode: 'Markdown',
+        reply_to_message_id: replyToMessageId,
+        disable_web_page_preview: false
+      });
+      
+      // Save each new message to S3
+      if (sentMessage) {
+        await saveBotMessage(chatId, sentMessage);
       }
       
       // Stagger messages with increasing delay for natural conversation feel
