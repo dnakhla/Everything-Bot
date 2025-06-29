@@ -11,6 +11,39 @@ import { S3Manager } from '../services/s3Manager.js';
 import { createToolWrapper } from '../utils/toolWrapper.js';
 
 /**
+ * Wrapper for OpenAI API calls with token tracking
+ * @param {Function} apiCall - Function that makes the OpenAI API call
+ * @param {string} purpose - Purpose of the API call for analytics
+ * @param {string} chatId - Chat ID for usage tracking
+ * @returns {Promise<Object>} OpenAI response
+ */
+async function trackLLMCall(apiCall, purpose, chatId = null) {
+  const startTime = Date.now();
+  const response = await apiCall();
+  const responseTime = Date.now() - startTime;
+  
+  // Track LLM usage and analytics
+  if (response.usage) {
+    const { Analytics } = await import('../services/analytics.js');
+    Analytics.trackLLMCall(
+      response.model || 'gpt-4.1-mini', 
+      purpose, 
+      response.usage, 
+      chatId, 
+      responseTime
+    );
+    
+    // Record usage limits if chatId available
+    if (chatId) {
+      const { recordLLMUsage } = await import('../services/usageLimits.js');
+      await recordLLMUsage(chatId.toString(), response.usage);
+    }
+  }
+  
+  return response;
+}
+
+/**
  * Analyze an image using GPT-4.1-mini vision model
  * @param {Buffer|string} imageData - Image buffer or base64 string
  * @param {string} instruction - Specific instruction for analysis
@@ -67,33 +100,37 @@ export const analyzeImage = createToolWrapper(
       }
       
       // Analyze with GPT-4.1-mini vision
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4.1-mini', // Use 4.1-mini for consistency with content analysis
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an image analysis expert. Provide detailed, accurate descriptions and analysis of images. Be specific and helpful.'
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: instruction
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/png;base64,${base64Image}`,
-                  detail: 'high' // Use high detail for better analysis
+      const response = await trackLLMCall(
+        () => openai.chat.completions.create({
+          model: 'gpt-4.1-mini', // Use 4.1-mini for consistency with content analysis
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an image analysis expert. Provide detailed, accurate descriptions and analysis of images. Be specific and helpful.'
+            },
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: instruction
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: `data:image/png;base64,${base64Image}`,
+                    detail: 'high' // Use high detail for better analysis
+                  }
                 }
-              }
-            ]
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 1000
-      });
+              ]
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 1000
+        }),
+        'image_analysis',
+        chatId
+      );
       
       const analysis = response.choices[0].message.content;
       Logger.log(`Image analysis completed: ${analysis.substring(0, 100)}...`);

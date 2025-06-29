@@ -14,7 +14,9 @@ import { CONFIG } from '../config.js';
  */
 const DAILY_LIMITS = {
   AUDIO_GENERATION: 5, // Max 5 audio generations per user per day
-  SEARCH_QUERIES: 100 // Max 100 search queries per user per day
+  SEARCH_QUERIES: 100, // Max 100 search queries per user per day
+  LLM_TOKENS: 50000, // Max 50k tokens per user per day
+  LLM_CALLS: 200 // Max 200 LLM calls per user per day
 };
 
 /**
@@ -80,7 +82,7 @@ export async function checkDailyLimit(chatId, operation) {
  * @param {string} operation - Operation type
  * @returns {Promise<void>}
  */
-export async function recordUsage(chatId, operation) {
+export async function recordUsage(chatId, operation, amount = 1) {
   const today = new Date().toISOString().split('T')[0];
   const usageKey = `fact_checker_bot/groups/${chatId}/usage/${today}.json`;
   
@@ -90,7 +92,7 @@ export async function recordUsage(chatId, operation) {
       date: today,
       chatId: chatId,
       lastUpdated: new Date().toISOString(),
-      [operation]: 1 // Default to 1 for this operation
+      [operation]: amount // Default to specified amount for this operation
     };
     
     try {
@@ -100,7 +102,7 @@ export async function recordUsage(chatId, operation) {
         currentUsage = {
           ...existingData,
           lastUpdated: new Date().toISOString(),
-          [operation]: (existingData[operation] || 0) + 1
+          [operation]: (existingData[operation] || 0) + amount
         };
       }
     } catch (error) {
@@ -153,9 +155,52 @@ export function shouldTrackUsage(operation) {
   return Object.hasOwnProperty.call(DAILY_LIMITS, operation);
 }
 
+/**
+ * Record LLM usage with token counts
+ * @param {string} chatId - Chat/User ID
+ * @param {Object} tokenUsage - Token usage from OpenAI response
+ * @returns {Promise<void>}
+ */
+export async function recordLLMUsage(chatId, tokenUsage) {
+  if (!tokenUsage) return;
+  
+  // Record call count
+  await recordUsage(chatId, 'LLM_CALLS', 1);
+  
+  // Record token usage
+  const totalTokens = tokenUsage.total_tokens || 0;
+  if (totalTokens > 0) {
+    await recordUsage(chatId, 'LLM_TOKENS', totalTokens);
+  }
+}
+
+/**
+ * Check if LLM usage would exceed daily limits
+ * @param {string} chatId - Chat/User ID
+ * @param {number} estimatedTokens - Estimated tokens for the request
+ * @returns {Promise<{callsAllowed: boolean, tokensAllowed: boolean, callsRemaining: number, tokensRemaining: number}>}
+ */
+export async function checkLLMUsage(chatId, estimatedTokens = 1000) {
+  const callsCheck = await checkDailyLimit(chatId, 'LLM_CALLS');
+  const tokensCheck = await checkDailyLimit(chatId, 'LLM_TOKENS');
+  
+  const tokensWouldExceed = (tokensCheck.currentCount + estimatedTokens) > tokensCheck.limit;
+  
+  return {
+    callsAllowed: callsCheck.allowed,
+    tokensAllowed: !tokensWouldExceed,
+    callsRemaining: callsCheck.remaining,
+    tokensRemaining: tokensCheck.remaining,
+    currentTokens: tokensCheck.currentCount,
+    tokenLimit: tokensCheck.limit
+  };
+}
+
 export default {
   checkDailyLimit,
   recordUsage,
+  recordLLMUsage,
+  checkLLMUsage,
   getUsageLimitMessage,
   shouldTrackUsage,
   DAILY_LIMITS

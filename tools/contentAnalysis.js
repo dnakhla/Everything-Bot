@@ -28,6 +28,7 @@ export async function summarizeContent(content, maxPoints = 5, instruction = nul
       : `Summarize this content into ${maxPoints} key points:\n\n${content}`;
         
     // Use LLM to summarize content
+    const startTime = Date.now();
     const response = await openai.chat.completions.create({
       model: 'gpt-4.1-nano',
       messages: [
@@ -43,8 +44,22 @@ export async function summarizeContent(content, maxPoints = 5, instruction = nul
       temperature: 0.3,
       max_tokens: 400
     });
-        
+    
+    const responseTime = Date.now() - startTime;
     const summary = response.choices[0].message.content;
+    
+    // Track LLM usage
+    if (response.usage) {
+      const { Analytics } = await import('../services/analytics.js');
+      Analytics.trackLLMCall(
+        response.model || 'gpt-4.1-nano', 
+        'content_analysis', 
+        response.usage, 
+        null, // No chatId available in this context
+        responseTime
+      );
+    }
+    
     Logger.log(`LLM Response: ${summary}`);
     return `📝 Summary (${maxPoints} key points):\n\n${summary}`;
         

@@ -126,7 +126,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
         }
         
         // Call OpenAI API with tools
-        Analytics.trackLLMCall(CONFIG.GPT_MODEL, "agent_chat_completion");
+        const startTime = Date.now();
         const response = await openai.chat.completions.create({
           model: CONFIG.GPT_MODEL,
           messages: [
@@ -145,7 +145,26 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
           max_tokens: 3000
         });
 
+        const responseTime = Date.now() - startTime;
         const responseMessage = response.choices[0].message;
+
+        // Track LLM usage with token counts and analytics
+        if (response.usage) {
+          const { recordLLMUsage } = await import('../services/usageLimits.js');
+          const { Analytics } = await import('../services/analytics.js');
+          
+          // Record usage for limits tracking
+          await recordLLMUsage(chatId.toString(), response.usage);
+          
+          // Track detailed analytics
+          Analytics.trackLLMCall(
+            response.model || CONFIG.GPT_MODEL, 
+            'agent_chat_completion', 
+            response.usage, 
+            chatId, 
+            responseTime
+          );
+        }
 
         // Check if a tool call was made
         if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
@@ -439,13 +458,25 @@ async function handleUsageCommand(chatId) {
     // Check limits for tracked operations
     const audioLimit = await checkDailyLimit(chatId.toString(), 'AUDIO_GENERATION');
     const searchLimit = await checkDailyLimit(chatId.toString(), 'SEARCH_QUERIES');
+    const llmCallsLimit = await checkDailyLimit(chatId.toString(), 'LLM_CALLS');
+    const llmTokensLimit = await checkDailyLimit(chatId.toString(), 'LLM_TOKENS');
     
     const resetDate = new Date(audioLimit.resetTime).toLocaleDateString();
+    
+    // Format token count for readability
+    const formatTokens = (count) => {
+      if (count >= 1000) {
+        return `${(count / 1000).toFixed(1)}k`;
+      }
+      return count.toString();
+    };
     
     const usageText = `📊 **Daily Usage Limits**
 
 🎤 **Audio Generation**: ${audioLimit.currentCount}/${audioLimit.limit} used (${audioLimit.remaining} remaining)
 🔍 **Search Queries**: ${searchLimit.currentCount}/${searchLimit.limit} used (${searchLimit.remaining} remaining)
+🤖 **LLM Calls**: ${llmCallsLimit.currentCount}/${llmCallsLimit.limit} used (${llmCallsLimit.remaining} remaining)
+📝 **LLM Tokens**: ${formatTokens(llmTokensLimit.currentCount)}/${formatTokens(llmTokensLimit.limit)} used (${formatTokens(llmTokensLimit.remaining)} remaining)
 
 **Reset Time**: Midnight UTC (${resetDate})
 

@@ -97,12 +97,69 @@ class Analytics {
     });
   }
 
-  static trackLLMCall(model, purpose, tokenCount = null) {
-    this.trackEvent('llm_call', {
+  static trackLLMCall(model, purpose, tokenUsage = null, chatId = null, responseTime = null) {
+    const eventData = {
       model: model,
       purpose: purpose,
-      token_count: tokenCount
-    });
+      chat_id: chatId ? this.hashChatId(chatId) : 'unknown'
+    };
+
+    // Add token usage data if available
+    if (tokenUsage) {
+      eventData.prompt_tokens = tokenUsage.prompt_tokens || 0;
+      eventData.completion_tokens = tokenUsage.completion_tokens || 0;
+      eventData.total_tokens = tokenUsage.total_tokens || 0;
+      
+      // Calculate estimated cost (rough estimates in USD)
+      const cost = this.calculateLLMCost(model, tokenUsage);
+      if (cost > 0) {
+        eventData.estimated_cost_usd = cost;
+      }
+    }
+
+    // Add response time if available
+    if (responseTime) {
+      eventData.response_time_ms = responseTime;
+    }
+
+    this.trackEvent('llm_call', eventData);
+  }
+
+  /**
+   * Calculate estimated cost for LLM usage based on current pricing
+   * @param {string} model - Model name
+   * @param {Object} usage - Token usage object
+   * @returns {number} Estimated cost in USD
+   */
+  static calculateLLMCost(model, usage) {
+    // OpenAI pricing estimates (per 1M tokens) as of 2024
+    const pricing = {
+      'gpt-4': { input: 30.00, output: 60.00 },
+      'gpt-4.1': { input: 30.00, output: 60.00 },
+      'gpt-4.1-mini': { input: 0.15, output: 0.60 },
+      'gpt-4.1-nano': { input: 0.075, output: 0.30 },
+      'gpt-4o-transcribe': { input: 6.00, output: 6.00 }, // Per hour estimate
+      'gpt-3.5-turbo': { input: 0.50, output: 1.50 }
+    };
+
+    // Find matching model (handle variations)
+    let modelPricing = null;
+    for (const [key, value] of Object.entries(pricing)) {
+      if (model.toLowerCase().includes(key.toLowerCase())) {
+        modelPricing = value;
+        break;
+      }
+    }
+
+    if (!modelPricing || !usage.prompt_tokens || !usage.completion_tokens) {
+      return 0;
+    }
+
+    // Calculate cost: (tokens / 1,000,000) * price_per_million
+    const inputCost = (usage.prompt_tokens / 1000000) * modelPricing.input;
+    const outputCost = (usage.completion_tokens / 1000000) * modelPricing.output;
+    
+    return Math.round((inputCost + outputCost) * 1000000) / 1000000; // Round to 6 decimal places
   }
 
   static trackToolUsage(toolName, success = true, executionTime = null) {
