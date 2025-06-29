@@ -139,7 +139,43 @@ const ALL_TOOLS = {
 • Keep responses concise and conversational`,
     useCases: ['Deliver final responses to user', 'End conversation loop', 'Send formatted messages']
   },
-  browser: browserTool
+  browser: browserTool,
+  generate_audio: {
+    definition: {
+      type: 'function',
+      function: {
+        name: 'generate_audio',
+        description: 'Generate audio/voice files from text using AI text-to-speech. ONLY use when user specifically requests audio, voice files, or podcast content.',
+        parameters: {
+          type: 'object',
+          properties: {
+            text: { 
+              type: 'string',
+              description: 'Text to convert to speech'
+            },
+            options: { 
+              type: 'object',
+              description: 'Generation options',
+              properties: {
+                seed: { type: 'number', default: 0 },
+                cfg_weight: { type: 'number', default: 0.5 },
+                temperature: { type: 'number', default: 0.8 },
+                exaggeration: { type: 'number', default: 0.5 }
+              }
+            }
+          },
+          required: ['text']
+        }
+      }
+    },
+    documentation: `**🎤 GENERATE_AUDIO TOOL** - AI text-to-speech generation:
+• generate_audio("Welcome to our podcast", {}) - Generate audio-only response
+• WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed)
+• Creates exactly ONE voice message/audio file containing complete response
+• Only use when user explicitly requests audio, voice files, or podcast content`,
+    useCases: ['Create podcast-style content', 'Generate voice responses', 'Convert text to audio for accessibility', 'Create voice narrations'],
+    requiresFeatureFlag: 'REPLICATE_API_TOKEN'
+  }
 };
 
 /**

@@ -15,7 +15,8 @@ import {
   calculate,
   analyze,
   fetch_url,
-  browser
+  browser,
+  generate_audio
 } from '../tools/agentToolkit.js';
 import { analyzeImage, analyzeImageContent } from '../tools/imageAnalysis.js';
 import { TOOL_USAGE_CONFIG } from './agentConfig.js';
@@ -73,6 +74,10 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
             
           case 'analyze_image':
             result = await executeAnalyzeImageTool(functionArgs, chatId);
+            break;
+            
+          case 'generate_audio':
+            result = await executeGenerateAudioTool(functionArgs, chatId);
             break;
           
           case 'send_messages':
@@ -203,6 +208,18 @@ async function executeAnalyzeImageTool(args, chatId) {
     const result = await analyzeImageContent(imageData, contentType, chatId);
     return result;
   }
+}
+
+/**
+ * Execute generate_audio tool with proper parameter mapping
+ */
+async function executeGenerateAudioTool(args, chatId) {
+  const { text, options = {} } = args;
+  
+  Logger.log(`Generate Audio: "${text.substring(0, 100)}..." with options: ${JSON.stringify(options)}`);
+  
+  const result = await generate_audio(text, options, chatId);
+  return result;
 }
 
 /**
@@ -377,6 +394,10 @@ export function getToolExecutionDescription(functionName, functionArgs) {
       return contentType === 'general' ? 
         `Analyzing image: "${imgInstruction}"` :
         `Analyzing ${contentType}: "${imgInstruction}"`;
+        
+    case 'generate_audio':
+      const { text: audioText } = functionArgs;
+      return `🎤 Generating audio from text (${audioText?.length || 0} chars)`;
         
     case 'send_messages':
       return `Sending ${functionArgs.messages?.length || 1} chat messages`;

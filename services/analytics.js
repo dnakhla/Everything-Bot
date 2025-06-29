@@ -3,7 +3,6 @@
  */
 
 import { Logger } from '../utils/logger.js';
-import crypto from 'crypto';
 
 class Analytics {
   /**
@@ -13,8 +12,8 @@ class Analytics {
    */
   static trackEvent(eventName, parameters = {}) {
     try {
-      // Temporarily disabled analytics to fix crypto import issue
-      // TODO: Re-enable once deployment cache clears
+      // Send to Google Analytics
+      this.sendToGA(eventName, parameters);
       
       // Always log locally for debugging
       Logger.log(`[ANALYTICS] ${eventName}: ${JSON.stringify(parameters)}`);
@@ -76,8 +75,8 @@ class Analytics {
    * @returns {string} Client ID
    */
   static generateClientId(chatId) {
-    // Generate a consistent but anonymous client ID
-    const hash = crypto.createHash('sha256').update(chatId.toString()).digest('hex');
+    // Generate a consistent but anonymous client ID using simple hash
+    const hash = this.simpleHash(chatId.toString());
     return hash.substring(0, 16) + '.' + hash.substring(16, 26);
   }
 
@@ -176,6 +175,41 @@ class Analytics {
     });
   }
 
+  static trackAudioGeneration(chatId, textLength, duration, audioType, success = true) {
+    this.trackEvent('audio_generation', {
+      chat_id: this.hashChatId(chatId),
+      text_length: textLength,
+      duration_seconds: duration,
+      audio_type: audioType, // 'voice' or 'audio'
+      success: success
+    });
+  }
+
+  static trackUsageLimitHit(chatId, operationType, currentCount, limit) {
+    this.trackEvent('usage_limit_hit', {
+      chat_id: this.hashChatId(chatId),
+      operation_type: operationType,
+      current_count: currentCount,
+      daily_limit: limit
+    });
+  }
+
+  /**
+   * Simple hash function for privacy (no crypto module needed)
+   * @param {string} str - String to hash
+   * @returns {string} Hash string
+   */
+  static simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Convert to positive hex string and pad
+    return Math.abs(hash).toString(16).padStart(8, '0').repeat(4).substring(0, 32);
+  }
+
   /**
    * Hash chat ID for privacy
    * @param {string|number} chatId 
@@ -183,7 +217,7 @@ class Analytics {
    */
   static hashChatId(chatId) {
     if (!chatId) return 'unknown';
-    const hash = crypto.createHash('sha256').update(chatId.toString()).digest('hex');
+    const hash = this.simpleHash(chatId.toString());
     return hash.substring(0, 8); // First 8 characters for analytics
   }
 }

@@ -134,6 +134,7 @@ export const browser = createToolWrapper(
       instruction = 'extract main content'
     } = options;
 
+
     let browser;
     let page;
     

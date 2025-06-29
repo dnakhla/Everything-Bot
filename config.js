@@ -17,6 +17,7 @@ export const CONFIG = {
   DEFAULT_SENSITIVITY: 75,
   SERPER_API_KEY: process.env.SERPER_API_KEY,
   BRAVE_API_KEY: process.env.BRAVE_API_KEY,
+  REPLICATE_API_TOKEN: process.env.REPLICATE_API_TOKEN,
   ADMIN_CHAT_ID: process.env.ADMIN_CHAT_ID || '1716676964', // Default to your chat ID
   GA_API_SECRET: process.env.GA_API_SECRET || '8vyVGizNTr2EvXWqlMQHUg',
   

@@ -29,7 +29,7 @@ export async function summarizeContent(content, maxPoints = 5, instruction = nul
         
     // Use LLM to summarize content
     const response = await openai.chat.completions.create({
-      model: CONFIG.GPT_MODEL || 'gpt-4.1',
+      model: 'gpt-4.1-nano',
       messages: [
         {
           role: 'system',

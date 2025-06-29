@@ -98,4 +98,88 @@ export const TelegramAPI = {
       throw error;
     }
   },
+
+  /**
+   * Send an audio file to a chat
+   * 
+   * @param {string|number} chatId - The chat ID
+   * @param {Buffer} audioBuffer - The audio file buffer
+   * @param {object} options - Additional options (caption, duration, etc)
+   * @returns {Promise<object>} - Promise that resolves with the sent message data
+   */
+  sendAudio: async (chatId, audioBuffer, options = {}) => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendAudio`;
+    
+    // Create form data for file upload
+    const FormData = (await import('form-data')).default;
+    const form = new FormData();
+    
+    form.append('chat_id', chatId);
+    form.append('audio', audioBuffer, {
+      filename: options.filename || 'audio.wav',
+      contentType: options.contentType || 'audio/wav'
+    });
+    
+    if (options.caption) form.append('caption', options.caption);
+    if (options.duration) form.append('duration', options.duration);
+    if (options.performer) form.append('performer', options.performer);
+    if (options.title) form.append('title', options.title);
+    if (options.reply_to_message_id) form.append('reply_to_message_id', options.reply_to_message_id);
+    if (options.parse_mode) form.append('parse_mode', options.parse_mode);
+
+    try {
+      const response = await axios.post(url, form, {
+        headers: {
+          ...form.getHeaders()
+        },
+        timeout: 60000 // 1 minute timeout for file upload
+      });
+      Logger.log(`Audio sent to chat ID ${chatId}`);
+      return response.data.result;
+    } catch (error) {
+      Logger.log(`Failed to send audio: ${error.message}`, 'error');
+      throw error;
+    }
+  },
+
+  /**
+   * Send a voice message to a chat
+   * 
+   * @param {string|number} chatId - The chat ID
+   * @param {Buffer} voiceBuffer - The voice file buffer (OGG format preferred)
+   * @param {object} options - Additional options (caption, duration, etc)
+   * @returns {Promise<object>} - Promise that resolves with the sent message data
+   */
+  sendVoice: async (chatId, voiceBuffer, options = {}) => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendVoice`;
+    
+    // Create form data for file upload
+    const FormData = (await import('form-data')).default;
+    const form = new FormData();
+    
+    form.append('chat_id', chatId);
+    form.append('voice', voiceBuffer, {
+      filename: options.filename || 'voice.ogg',
+      contentType: options.contentType || 'audio/ogg'
+    });
+    
+    if (options.caption) form.append('caption', options.caption);
+    if (options.duration) form.append('duration', options.duration);
+    if (options.reply_to_message_id) form.append('reply_to_message_id', options.reply_to_message_id);
+    if (options.parse_mode) form.append('parse_mode', options.parse_mode);
+
+    try {
+      const response = await axios.post(url, form, {
+        headers: {
+          ...form.getHeaders()
+        },
+        timeout: 60000 // 1 minute timeout for file upload
+      });
+      Logger.log(`Voice message sent to chat ID ${chatId}`);
+      return response.data.result;
+    } catch (error) {
+      Logger.log(`Failed to send voice message: ${error.message}`, 'error');
+      throw error;
+    }
+  },
 };

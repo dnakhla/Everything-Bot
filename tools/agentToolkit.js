@@ -14,6 +14,8 @@ import * as DataProcessing from './dataProcessing.js';
 import * as MessageService from '../services/messageService.js';
 import { browser, BROWSER_TOOLKIT } from './browserTool.js';
 import { analyzeImage, extractTextFromImage, analyzeImageContent, IMAGE_ANALYSIS_TOOLKIT } from './imageAnalysis.js';
+import { generateAudioSmart, shouldGenerateAudio } from './audioGeneration.js';
+import { Logger } from '../utils/logger.js';
 import { createToolWrapper } from '../utils/toolWrapper.js';
 
 /**
@@ -21,11 +23,22 @@ import { createToolWrapper } from '../utils/toolWrapper.js';
  * @param {string} query - What to search for
  * @param {string} topic - Search type: 'web', 'news', 'images', 'videos', 'places', 'reddit', 'alternative'
  * @param {Object} options - Additional search options
+ * @param {string} chatId - Chat ID for usage tracking
  * @returns {string} Formatted search results
  */
 export const search = createToolWrapper(
-  async (query, topic = 'web', options = {}) => {
+  async (query, topic = 'web', options = {}, chatId = null) => {
     const { subreddit = 'all', timeframe = 'week', maxResults = 10 } = options;
+    
+    // Track search usage if chatId provided
+    if (chatId) {
+      try {
+        const { recordUsage } = await import('../services/usageLimits.js');
+        await recordUsage(chatId, 'SEARCH_QUERIES');
+      } catch (error) {
+        Logger.log(`Failed to record search usage: ${error.message}`, 'warn');
+      }
+    }
     
     switch (topic.toLowerCase()) {
       case 'news':
@@ -214,11 +227,21 @@ export { browser };
 /**
  * Fetch and analyze content from a URL
  * @param {string} url - URL to fetch
- * @param {string} instruction - What to analyze in the content
- * @returns {Promise<string>} Fetched and analyzed content
+ * @param {string} instruction - What to analyze in the content, or 'raw' for full content
+ * @returns {Promise<string>} Fetched content (raw by default) or analyzed content
  */
 export const fetch_url = createToolWrapper(
-  async (url, instruction = 'summarize the main content') => {
+  async (url, instruction = 'raw') => {
+    
+    // Track URL fetch usage if chatId provided
+    if (chatId) {
+      try {
+        const { recordUsage } = await import('../services/usageLimits.js');
+        await recordUsage(chatId, 'FETCH_URL');
+      } catch (error) {
+        Logger.log(`Failed to record fetch_url usage: ${error.message}`, 'warn');
+      }
+    }
     try {
       // Validate URL
       const urlPattern = /^https?:\/\//i;
@@ -268,23 +291,35 @@ export const fetch_url = createToolWrapper(
           return '❌ No meaningful content found on the page';
         }
         
-        // Use the analyze tool to process the content according to instruction
-        const analyzedResult = await ContentAnalysis.summarizeContent(content, 8, instruction);
-        
         const sourceInfo = fetchResult.type === 'api_data' ? '🔗 API Data' : 
                           fetchResult.type === 'js_data' ? '⚡ JavaScript Data' : '📄 Web Content';
         
-        let result = `${sourceInfo} from ${url}:\n\n${analyzedResult}`;
-        
-        // Add relevant links if found
-        if (links.length > 0) {
-          const relevantLinks = filterRelevantLinks(links, instruction);
-          if (relevantLinks.length > 0) {
-            result += `\n\n🔗 **Related Links Found:**\n${relevantLinks.slice(0, 5).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
+        // Return raw content by default, or analyze if specific instruction given
+        if (instruction === 'raw' || instruction === 'summarize the main content') {
+          let result = `${sourceInfo} from ${url}:\n\n${content}`;
+          
+          // Add relevant links if found
+          if (links.length > 0) {
+            result += `\n\n🔗 **Links Found:**\n${links.slice(0, 10).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
           }
+          
+          return result;
+        } else {
+          // Use the analyze tool to process the content according to specific instruction
+          const analyzedResult = await ContentAnalysis.summarizeContent(content, 8, instruction);
+          
+          let result = `${sourceInfo} from ${url}:\n\n${analyzedResult}`;
+          
+          // Add relevant links if found
+          if (links.length > 0) {
+            const relevantLinks = filterRelevantLinks(links, instruction);
+            if (relevantLinks.length > 0) {
+              result += `\n\n🔗 **Related Links Found:**\n${relevantLinks.slice(0, 5).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
+            }
+          }
+          
+          return result;
         }
-        
-        return result;
         
       } catch (intelligentError) {
         Logger.log(`Intelligent fetch failed, falling back to simple fetch: ${intelligentError.message}`, 'warn');
@@ -320,20 +355,32 @@ export const fetch_url = createToolWrapper(
           content = content.replace(/\s+/g, ' ').trim();
         }
         
-        // Use the analyze tool to process the content according to instruction
-        const analyzedResult = await ContentAnalysis.summarizeContent(content, 8, instruction);
-        
-        let result = `📄 Content from ${url}:\n\n${analyzedResult}`;
-        
-        // Add relevant links if found
-        if (links.length > 0) {
-          const relevantLinks = filterRelevantLinks(links, instruction);
-          if (relevantLinks.length > 0) {
-            result += `\n\n🔗 **Related Links Found:**\n${relevantLinks.slice(0, 5).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
+        // Return raw content by default, or analyze if specific instruction given
+        if (instruction === 'raw' || instruction === 'summarize the main content') {
+          let result = `📄 Content from ${url}:\n\n${content}`;
+          
+          // Add links if found
+          if (links.length > 0) {
+            result += `\n\n🔗 **Links Found:**\n${links.slice(0, 10).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
           }
+          
+          return result;
+        } else {
+          // Use the analyze tool to process the content according to specific instruction
+          const analyzedResult = await ContentAnalysis.summarizeContent(content, 8, instruction);
+          
+          let result = `📄 Content from ${url}:\n\n${analyzedResult}`;
+          
+          // Add relevant links if found
+          if (links.length > 0) {
+            const relevantLinks = filterRelevantLinks(links, instruction);
+            if (relevantLinks.length > 0) {
+              result += `\n\n🔗 **Related Links Found:**\n${relevantLinks.slice(0, 5).map(link => `• [${link.text}](${link.url})`).join('\n')}`;
+            }
+          }
+          
+          return result;
         }
-        
-        return result;
       }
       
     } catch (error) {
@@ -350,8 +397,8 @@ export const fetch_url = createToolWrapper(
   },
   {
     name: 'fetch_url',
-    category: 'core',
-    description: 'Fetch and analyze web page content',
+    category: 'core', 
+    description: 'Fetch web page content (returns full sanitized content by default, or analyzed content with specific instruction)',
     formatResult: (result) => result
   }
 );
@@ -438,6 +485,136 @@ function formatTranscriptResults(messages, timeframe) {
   
   return summary;
 }
+
+/**
+ * Generate audio from text using Replicate API
+ * @param {string} text - Text to convert to speech
+ * @param {Object} options - Generation options
+ * @param {string} chatId - Chat ID for sending the audio
+ * @returns {Promise<string>} Success message
+ */
+export const generate_audio = createToolWrapper(
+  async (text, options = {}, chatId) => {
+    if (!chatId) {
+      throw new Error('Chat ID is required for audio generation');
+    }
+
+    // Check daily usage limit for audio generation
+    const { checkDailyLimit, recordUsage, getUsageLimitMessage } = await import('../services/usageLimits.js');
+    const limitCheck = await checkDailyLimit(chatId.toString(), 'AUDIO_GENERATION');
+    
+    if (!limitCheck.allowed) {
+      const errorMessage = getUsageLimitMessage('AUDIO_GENERATION', limitCheck);
+      Logger.log(`Audio generation blocked for chat ${chatId}: daily limit exceeded (${limitCheck.currentCount}/${limitCheck.limit})`);
+      
+      // Track usage limit hit
+      const { Analytics } = await import('../services/analytics.js');
+      Analytics.trackUsageLimitHit(chatId, 'AUDIO_GENERATION', limitCheck.currentCount, limitCheck.limit);
+      
+      // Import TelegramAPI to send limit message
+      const { TelegramAPI } = await import('../services/telegramAPI.js');
+      await TelegramAPI.sendMessage(chatId, errorMessage, { parse_mode: 'Markdown' });
+      
+      // Return termination marker to end conversation
+      return {
+        __MESSAGES_SENT__: true,
+        audioType: 'limit_exceeded',
+        limitInfo: limitCheck
+      };
+    }
+
+    // Check if this is an appropriate use case
+    if (!shouldGenerateAudio(text)) {
+      Logger.log(`Audio generation may not be appropriate for: "${text.substring(0, 100)}..."`, 'warn');
+    }
+
+    Logger.log(`Generating audio for chat ${chatId}: "${text.substring(0, 100)}..." (${limitCheck.remaining - 1} remaining today)`);
+
+    try {
+      // Generate audio using the smart generation function
+      const { buffer: audioBuffer, metadata } = await generateAudioSmart(text, options);
+
+      // Import TelegramAPI here to avoid circular dependency
+      const { TelegramAPI } = await import('../services/telegramAPI.js');
+
+      // Determine whether to send as voice message or audio file
+      const isShortMessage = text.length < 500;
+      const duration = Math.ceil(metadata.estimatedDuration);
+
+      if (isShortMessage) {
+        // Send as voice message for short content
+        const sentMessage = await TelegramAPI.sendVoice(chatId, audioBuffer, {
+          caption: `🎤 Voice message (${duration}s)`,
+          duration: duration,
+          parse_mode: 'Markdown'
+        });
+
+        Logger.log(`Sent voice message ${sentMessage.message_id} to chat ${chatId}`);
+        
+        // Record successful usage and track analytics
+        await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
+        
+        const { Analytics } = await import('../services/analytics.js');
+        Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'voice', true);
+        
+        // Return special marker to end conversation loop after audio generation
+        return {
+          __MESSAGES_SENT__: true,
+          audioType: 'voice',
+          duration: duration,
+          characters: metadata.processedLength,
+          messageId: sentMessage.message_id
+        };
+      } else {
+        // Send as audio file for longer content
+        // Create a descriptive title from the first part of the text
+        const titleText = text.length > 50 ? text.substring(0, 47) + '...' : text;
+        const cleanTitle = titleText.replace(/[^\w\s-]/g, '').trim() || 'Generated Audio';
+        
+        const sentMessage = await TelegramAPI.sendAudio(chatId, audioBuffer, {
+          caption: `🎧 Generated audio (${duration}s)`,
+          title: cleanTitle,
+          performer: 'Everything Bot',
+          duration: duration,
+          filename: 'generated_audio.wav',
+          parse_mode: 'Markdown'
+        });
+
+        Logger.log(`Sent audio file ${sentMessage.message_id} to chat ${chatId}`);
+        
+        // Record successful usage and track analytics
+        await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
+        
+        const { Analytics } = await import('../services/analytics.js');
+        Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'audio', true);
+        
+        // Return special marker to end conversation loop after audio generation
+        return {
+          __MESSAGES_SENT__: true,
+          audioType: 'audio',
+          duration: duration,
+          characters: metadata.processedLength,
+          messageId: sentMessage.message_id
+        };
+      }
+
+    } catch (error) {
+      Logger.log(`Audio generation failed: ${error.message}`, 'error');
+      
+      // Track failed audio generation
+      const { Analytics } = await import('../services/analytics.js');
+      Analytics.trackAudioGeneration(chatId, text.length, 0, 'unknown', false);
+      
+      throw new Error(`Failed to generate audio: ${error.message}`);
+    }
+  },
+  {
+    name: 'generate_audio',
+    category: 'core',
+    description: 'Generate and send audio files from text using AI TTS',
+    formatResult: (result) => result
+  }
+);
 
 /**
  * Agent toolkit registry - simplified interface for agents
@@ -543,6 +720,24 @@ export const AGENT_TOOLKIT = {
       'Product identification and analysis',
       'Chart and diagram interpretation'
     ]
+  },
+  
+  generate_audio: {
+    name: 'generate_audio',
+    description: 'Generate audio/voice files from text using AI text-to-speech: generate_audio(text, options, chatId)',
+    examples: [
+      'generate_audio("Welcome to our podcast episode about today\'s tech news", {}, chatId)',
+      'generate_audio(podcastScript, {exaggeration: 0.3}, chatId)',
+      'generate_audio("Here\'s your audio summary of the latest developments", {}, chatId)'
+    ],
+    use_cases: [
+      'Create podcast-style audio content as complete response',
+      'Generate voice responses when user requests audio',
+      'Convert research findings into audio format',
+      'Create voice narrations as final response'
+    ],
+    important: 'WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed). Creates exactly ONE audio file. MAX 1 MINUTE (1000 characters).',
+    workflow: 'Research → generate_audio → END (audio-only response, max 1 minute)'
   }
 };
 

@@ -174,9 +174,12 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
             // Execute the tool using the agent executor
             const toolResult = await executeAgentTool(functionName, functionArgs, chatId);
             
-            // Check if this is a send_messages response (messages already sent)
+            // Check if this is a send_messages or generate_audio response (messages already sent)
             if (toolResult && typeof toolResult === 'object' && toolResult.__MESSAGES_SENT__) {
-              Logger.log(`[MESSAGES_SENT_FLAG] Detected: ${toolResult.count} messages sent, ending loop. Timestamp: ${toolResult.timestamp}`);
+              const details = toolResult.count ? 
+                `${toolResult.count} messages sent` : 
+                `${toolResult.audioType} generated (${toolResult.duration}s)`;
+              Logger.log(`[MESSAGES_SENT_FLAG] Detected: ${details}, ending loop. Timestamp: ${toolResult.timestamp || Date.now()}`);
               messagesSent = true;
               
               // Delete the status message since responses have been sent
@@ -400,6 +403,7 @@ export async function handleHelpCommand(chatId) {
 • \`/help\` - Show this help message
 • \`/clearmessages [number]\` - Delete bot's last messages (default: 4, max: 20)
 • \`/cancel\` - Cancel current bot operation
+• \`/usage\` - Check daily usage limits (audio generation: 5/day)
 
 **Features:**
 🔍 **Search** - Web, news, Reddit, images, videos, places
@@ -422,6 +426,44 @@ The bot remembers context and can reference previous conversations. Just ask nat
   const helpMessage = await TelegramAPI.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
   if (helpMessage) {
     await saveBotMessage(chatId, helpMessage);
+  }
+}
+
+/**
+ * Handle usage command - show daily usage limits and remaining allowances
+ */
+async function handleUsageCommand(chatId) {
+  try {
+    const { checkDailyLimit } = await import('../services/usageLimits.js');
+    
+    // Check limits for all tracked operations
+    const audioLimit = await checkDailyLimit(chatId.toString(), 'AUDIO_GENERATION');
+    const browserLimit = await checkDailyLimit(chatId.toString(), 'BROWSER_AUTOMATION');
+    const searchLimit = await checkDailyLimit(chatId.toString(), 'SEARCH_QUERIES');
+    
+    const resetDate = new Date(audioLimit.resetTime).toLocaleDateString();
+    
+    const usageText = `📊 **Daily Usage Limits**
+
+🎤 **Audio Generation**: ${audioLimit.currentCount}/${audioLimit.limit} used (${audioLimit.remaining} remaining)
+🌐 **Browser Automation**: ${browserLimit.currentCount}/${browserLimit.limit} used (${browserLimit.remaining} remaining)  
+🔍 **Search Queries**: ${searchLimit.currentCount}/${searchLimit.limit} used (${searchLimit.remaining} remaining)
+
+**Reset Time**: Midnight UTC (${resetDate})
+
+These limits help manage costs and ensure fair usage for everyone! 😊`;
+
+    const usageMessage = await TelegramAPI.sendMessage(chatId, usageText, { 
+      parse_mode: 'Markdown' 
+    });
+    
+    if (usageMessage) {
+      await saveBotMessage(chatId, usageMessage);
+    }
+    
+  } catch (error) {
+    Logger.log(`Error in handleUsageCommand: ${error.message}`, 'error');
+    await TelegramAPI.sendMessage(chatId, '❌ Error checking usage limits. Please try again later.');
   }
 }
 
@@ -547,6 +589,15 @@ export async function handleMessage(chatId, text, message) {
     await TelegramAPI.sendMessage(chatId, '🛑 Cancellation requested. The bot will stop processing after the current operation.', { 
       reply_to_message_id: message.message_id 
     });
+  } else if (text.startsWith('/usage')) {
+    // Parse optional days parameter for detailed report
+    const parts = text.split(' ');
+    if (parts.length > 1 && parts[1] === 'report') {
+      const days = parts[2] ? parseInt(parts[2]) : 7;
+      await handleUsageReportCommand(chatId, days);
+    } else {
+      await handleUsageCommand(chatId);
+    }
   } else if (text.toLowerCase().startsWith('robot,') || text.toLowerCase().startsWith('robot ')) {
     const query = text.slice(text.indexOf(' ')).trim();
     await handleRobotQuery(chatId, query, '', message.message_id);
