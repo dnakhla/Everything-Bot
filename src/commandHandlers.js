@@ -436,9 +436,8 @@ async function handleUsageCommand(chatId) {
   try {
     const { checkDailyLimit } = await import('../services/usageLimits.js');
     
-    // Check limits for all tracked operations
+    // Check limits for tracked operations
     const audioLimit = await checkDailyLimit(chatId.toString(), 'AUDIO_GENERATION');
-    const browserLimit = await checkDailyLimit(chatId.toString(), 'BROWSER_AUTOMATION');
     const searchLimit = await checkDailyLimit(chatId.toString(), 'SEARCH_QUERIES');
     
     const resetDate = new Date(audioLimit.resetTime).toLocaleDateString();
@@ -446,7 +445,6 @@ async function handleUsageCommand(chatId) {
     const usageText = `📊 **Daily Usage Limits**
 
 🎤 **Audio Generation**: ${audioLimit.currentCount}/${audioLimit.limit} used (${audioLimit.remaining} remaining)
-🌐 **Browser Automation**: ${browserLimit.currentCount}/${browserLimit.limit} used (${browserLimit.remaining} remaining)  
 🔍 **Search Queries**: ${searchLimit.currentCount}/${searchLimit.limit} used (${searchLimit.remaining} remaining)
 
 **Reset Time**: Midnight UTC (${resetDate})

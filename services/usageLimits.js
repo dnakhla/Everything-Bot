@@ -14,7 +14,6 @@ import { CONFIG } from '../config.js';
  */
 const DAILY_LIMITS = {
   AUDIO_GENERATION: 5, // Max 5 audio generations per user per day
-  BROWSER_AUTOMATION: 20, // Max 20 browser tool uses per user per day
   SEARCH_QUERIES: 100 // Max 100 search queries per user per day
 };
 
@@ -27,28 +26,30 @@ const DAILY_LIMITS = {
 export async function checkDailyLimit(chatId, operation) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   const usageKey = `fact_checker_bot/groups/${chatId}/usage/${today}.json`;
+  const limit = DAILY_LIMITS[operation] || 10; // Default limit if not specified
+  
+  // Calculate reset time (midnight UTC)
+  const tomorrow = new Date();
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(0, 0, 0, 0);
+  const resetTime = tomorrow.toISOString();
   
   try {
-    // Get current usage for today
-    let currentUsage = {};
+    // Idempotent check: Always try to get current usage, fallback gracefully
+    let currentCount = 0;
+    
     try {
-      const usageData = await S3Manager.getObject(usageKey);
-      currentUsage = JSON.parse(usageData);
+      const usageData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, usageKey);
+      if (usageData && typeof usageData === 'object' && typeof usageData[operation] === 'number') {
+        currentCount = usageData[operation];
+      }
     } catch (error) {
-      // File doesn't exist yet, start with empty usage
-      currentUsage = {};
+      // File doesn't exist or is invalid - treat as zero usage (idempotent)
+      currentCount = 0;
     }
     
-    const currentCount = currentUsage[operation] || 0;
-    const limit = DAILY_LIMITS[operation] || 10; // Default limit if not specified
     const remaining = Math.max(0, limit - currentCount);
     const allowed = currentCount < limit;
-    
-    // Calculate reset time (midnight UTC)
-    const tomorrow = new Date();
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    tomorrow.setUTCHours(0, 0, 0, 0);
-    const resetTime = tomorrow.toISOString();
     
     Logger.log(`Usage check for ${chatId} - ${operation}: ${currentCount}/${limit} (${remaining} remaining)`);
     
@@ -62,13 +63,13 @@ export async function checkDailyLimit(chatId, operation) {
     
   } catch (error) {
     Logger.log(`Error checking daily limit: ${error.message}`, 'error');
-    // On error, allow the operation (fail open)
+    // On error, fail open (allow operation) - idempotent fallback
     return {
       allowed: true,
-      remaining: DAILY_LIMITS[operation] || 10,
-      resetTime: new Date().toISOString(),
+      remaining: limit,
+      resetTime: resetTime,
       currentCount: 0,
-      limit: DAILY_LIMITS[operation] || 10
+      limit: limit
     };
   }
 }
@@ -84,25 +85,31 @@ export async function recordUsage(chatId, operation) {
   const usageKey = `fact_checker_bot/groups/${chatId}/usage/${today}.json`;
   
   try {
-    // Get current usage
-    let currentUsage = {};
+    // Idempotent upsert: Get current usage or create default structure
+    let currentUsage = {
+      date: today,
+      chatId: chatId,
+      lastUpdated: new Date().toISOString(),
+      [operation]: 1 // Default to 1 for this operation
+    };
+    
     try {
-      const usageData = await S3Manager.getObject(usageKey);
-      currentUsage = JSON.parse(usageData);
+      const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, usageKey);
+      if (existingData && typeof existingData === 'object') {
+        // Merge existing data with new operation count
+        currentUsage = {
+          ...existingData,
+          lastUpdated: new Date().toISOString(),
+          [operation]: (existingData[operation] || 0) + 1
+        };
+      }
     } catch (error) {
-      // File doesn't exist, start fresh
-      currentUsage = {
-        date: today,
-        chatId: chatId
-      };
+      // File doesn't exist or is invalid - use default structure
+      Logger.log(`Creating new usage file for ${chatId} on ${today}`, 'info');
     }
     
-    // Increment counter
-    currentUsage[operation] = (currentUsage[operation] || 0) + 1;
-    currentUsage.lastUpdated = new Date().toISOString();
-    
-    // Save back to S3
-    await S3Manager.uploadObject(usageKey, JSON.stringify(currentUsage, null, 2));
+    // Upsert: Save updated usage (will create or update)
+    await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, usageKey, currentUsage);
     
     Logger.log(`Recorded usage for ${chatId} - ${operation}: ${currentUsage[operation]}/${DAILY_LIMITS[operation] || 10}`);
     
