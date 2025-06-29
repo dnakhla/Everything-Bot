@@ -297,8 +297,8 @@ export const fetch_url = createToolWrapper(
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; FactCheckerBot/1.0)'
           },
-          maxContentLength: 1024 * 1024, // 1MB limit (no truncation)
-          maxBodyLength: 1024 * 1024
+          maxContentLength: 10 * 1024 * 1024, // 10MB limit for reports/PDFs
+          maxBodyLength: 10 * 1024 * 1024
         });
         
         let content = response.data;

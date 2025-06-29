@@ -13,14 +13,11 @@ class Analytics {
    */
   static trackEvent(eventName, parameters = {}) {
     try {
-      // Only track in production (when running on Lambda)
-      if (process.env.AWS_LAMBDA_FUNCTION_NAME) {
-        // Send to Google Analytics via Measurement Protocol
-        this.sendToGA(eventName, parameters);
-      }
+      // Temporarily disabled analytics to fix crypto import issue
+      // TODO: Re-enable once deployment cache clears
       
       // Always log locally for debugging
-      Logger.log(`[ANALYTICS] ${eventName}`, parameters);
+      Logger.log(`[ANALYTICS] ${eventName}: ${JSON.stringify(parameters)}`);
     } catch (error) {
       Logger.log(`Analytics tracking error: ${error.message}`, 'warn');
     }

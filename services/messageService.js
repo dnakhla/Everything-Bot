@@ -749,7 +749,7 @@ export async function saveUserMessage(chatId, message) {
     // Save back to S3
     await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
         
-    Logger.log(`Saved user message from chat ${chatId}, message ID: ${message.message_id} with ${attachments.length} attachments`);
+    Logger.log(`Saved user message from chat ${chatId}, message ID: ${message.message_id || 'unknown'} with ${attachments.length} attachments`);
     
     // Notify admin if this is a new conversation
     if (isNewConversation) {
