@@ -29,11 +29,13 @@ export async function generateAudio(text, options = {}) {
     throw new Error('Text is required for audio generation');
   }
 
-  // Limit text length to ~60 seconds of speech (approximately 1000 characters)
-  // At normal speech rate (~150 words/min), 60 seconds = ~150 words = ~900-1000 characters
-  if (text.length > 1000) {
-    text = text.substring(0, 1000) + '...';
-    Logger.log('Text truncated to 1000 characters for 60-second audio limit', 'warn');
+  // Limit text length to ~60 seconds of speech (approximately 150 words)
+  // At normal speech rate (~150 words/min), 60 seconds = ~150 words
+  const wordCount = text.split(/\s+/).length;
+  if (wordCount > 150) {
+    const words = text.split(/\s+/).slice(0, 150);
+    text = words.join(' ') + '...';
+    Logger.log(`Text truncated from ${wordCount} to 150 words for 1-minute audio limit`, 'warn');
   }
 
   const {
@@ -151,13 +153,16 @@ export async function generateAudioSmart(text, options = {}) {
 
   const audioBuffer = await generateAudio(cleanText, options);
   
-  // Use estimated duration for now (actual duration parsing would require more complex WAV parsing)
-  const actualDuration = Math.min(cleanText.length * 0.06, 60);
+  // Use word-based duration estimation (150 words per minute = 2.5 words per second)
+  const wordCount = cleanText.split(/\s+/).length;
+  const actualDuration = Math.min(wordCount / 2.5, 60);
   
   const metadata = {
     originalLength: text.length,
     processedLength: cleanText.length,
-    estimatedDuration: Math.min(cleanText.length * 0.06, 60), // ~17 chars per second, max 60 seconds
+    originalWordCount: text.split(/\s+/).length,
+    processedWordCount: wordCount,
+    estimatedDuration: actualDuration, // ~2.5 words per second, max 60 seconds
     actualDuration: actualDuration,
     options: options
   };

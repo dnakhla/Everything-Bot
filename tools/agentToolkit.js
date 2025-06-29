@@ -537,66 +537,32 @@ export const generate_audio = createToolWrapper(
       // Import TelegramAPI here to avoid circular dependency
       const { TelegramAPI } = await import('../services/telegramAPI.js');
 
-      // Determine whether to send as voice message or audio file
-      const isShortMessage = text.length < 500;
+      // Always send as voice message (no audio files)
       const duration = Math.ceil(metadata.estimatedDuration);
 
-      if (isShortMessage) {
-        // Send as voice message for short content
-        const sentMessage = await TelegramAPI.sendVoice(chatId, audioBuffer, {
-          caption: `🎤 Voice message (${duration}s)`,
-          duration: duration,
-          parse_mode: 'Markdown'
-        });
+      // Send as voice message
+      const sentMessage = await TelegramAPI.sendVoice(chatId, audioBuffer, {
+        caption: `🎤 Voice message (${duration}s)`,
+        duration: duration,
+        parse_mode: 'Markdown'
+      });
 
-        Logger.log(`Sent voice message ${sentMessage.message_id} to chat ${chatId}`);
-        
-        // Record successful usage and track analytics
-        await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
-        
-        const { Analytics } = await import('../services/analytics.js');
-        Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'voice', true);
-        
-        // Return special marker to end conversation loop after audio generation
-        return {
-          __MESSAGES_SENT__: true,
-          audioType: 'voice',
-          duration: duration,
-          characters: metadata.processedLength,
-          messageId: sentMessage.message_id
-        };
-      } else {
-        // Send as audio file for longer content
-        // Create a descriptive title from the first part of the text
-        const titleText = text.length > 50 ? text.substring(0, 47) + '...' : text;
-        const cleanTitle = titleText.replace(/[^\w\s-]/g, '').trim() || 'Generated Audio';
-        
-        const sentMessage = await TelegramAPI.sendAudio(chatId, audioBuffer, {
-          caption: `🎧 Generated audio (${duration}s)`,
-          title: cleanTitle,
-          performer: 'Everything Bot',
-          duration: duration,
-          filename: 'generated_audio.wav',
-          parse_mode: 'Markdown'
-        });
-
-        Logger.log(`Sent audio file ${sentMessage.message_id} to chat ${chatId}`);
-        
-        // Record successful usage and track analytics
-        await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
-        
-        const { Analytics } = await import('../services/analytics.js');
-        Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'audio', true);
-        
-        // Return special marker to end conversation loop after audio generation
-        return {
-          __MESSAGES_SENT__: true,
-          audioType: 'audio',
-          duration: duration,
-          characters: metadata.processedLength,
-          messageId: sentMessage.message_id
-        };
-      }
+      Logger.log(`Sent voice message ${sentMessage.message_id} to chat ${chatId}`);
+      
+      // Record successful usage and track analytics
+      await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
+      
+      const { Analytics } = await import('../services/analytics.js');
+      Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'voice', true);
+      
+      // Return special marker to end conversation loop after audio generation
+      return {
+        __MESSAGES_SENT__: true,
+        audioType: 'voice',
+        duration: duration,
+        characters: metadata.processedLength,
+        messageId: sentMessage.message_id
+      };
 
     } catch (error) {
       Logger.log(`Audio generation failed: ${error.message}`, 'error');

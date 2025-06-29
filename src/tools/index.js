@@ -145,13 +145,13 @@ const ALL_TOOLS = {
       type: 'function',
       function: {
         name: 'generate_audio',
-        description: 'Generate audio/voice files from text using AI text-to-speech. ONLY use when user specifically requests audio, voice files, or podcast content.',
+        description: 'Generate audio/voice files from text using AI text-to-speech. ONLY use when user specifically requests audio, voice files, or podcast content. IMPORTANT: Limit text to 140-150 words maximum (1 minute audio limit).',
         parameters: {
           type: 'object',
           properties: {
             text: { 
               type: 'string',
-              description: 'Text to convert to speech'
+              description: 'Text to convert to speech. Must be 140-150 words maximum for 1-minute audio.'
             },
             options: { 
               type: 'object',
@@ -171,7 +171,8 @@ const ALL_TOOLS = {
     documentation: `**🎤 GENERATE_AUDIO TOOL** - AI text-to-speech generation:
 • generate_audio("Welcome to our podcast", {}) - Generate audio-only response
 • WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed)
-• Creates exactly ONE voice message/audio file containing complete response
+• Creates exactly ONE voice message containing complete response
+• CRITICAL: Keep text to 140-150 words maximum (1-minute audio limit)
 • Only use when user explicitly requests audio, voice files, or podcast content`,
     useCases: ['Create podcast-style content', 'Generate voice responses', 'Convert text to audio for accessibility', 'Create voice narrations'],
     requiresFeatureFlag: 'REPLICATE_API_TOKEN'
