@@ -135,7 +135,7 @@ const ALL_TOOLS = {
     documentation: `**💬 SEND_MESSAGES TOOL** - Final response delivery:
 • send_messages({messages: ["Response 1", "Response 2"]})
 • This tool ENDS the conversation - use only when ready to respond
-• Focus on essential information only - avoid unnecessary links unless highly relevant
+• Include links when user asks for them or when they directly answer the question
 • Keep responses concise and conversational`,
     useCases: ['Deliver final responses to user', 'End conversation loop', 'Send formatted messages']
   },
