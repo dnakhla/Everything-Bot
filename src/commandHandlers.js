@@ -132,7 +132,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
           messages: [
             {
               role: 'system',
-              content: await getAgentSystemPrompt(personality)
+              content: await getAgentSystemPrompt(personality, loopCount + 1, MAX_LOOPS)
             },
             {
               role: 'user',

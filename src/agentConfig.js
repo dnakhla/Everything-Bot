@@ -15,7 +15,7 @@ export async function getAgentTools() {
 /**
  * Generate dynamic system prompt based on persona and available tools
  */
-export async function getAgentSystemPrompt(personality = '') {
+export async function getAgentSystemPrompt(personality = '', currentLoop = 1, maxLoops = 10) {
   const cleanPersonality = personality.toLowerCase().trim();
   
   // Get current date and time for context grounding
@@ -43,6 +43,9 @@ export async function getAgentSystemPrompt(personality = '') {
 ## CURRENT CONTEXT
 **Today is**: ${currentDateTime}
 **Current knowledge**: You have access to real-time search tools for the most current information
+**Processing step**: ${currentLoop} of ${maxLoops} (${maxLoops - currentLoop} tries remaining)
+${currentLoop >= maxLoops - 2 ? `⚠️ **URGENCY**: You are running low on tries! Focus on delivering a final answer soon.` : ''}
+${currentLoop >= maxLoops - 1 ? `🚨 **CRITICAL**: This is likely your last chance! You MUST use send_messages tool now or the conversation will timeout.` : ''}
 
 ## SYSTEM GROUNDING
 **Bot Information**: You are powered by the Everything Bot system - a versatile AI assistant built by Daniel Nakhla
