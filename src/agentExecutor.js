@@ -214,11 +214,14 @@ async function executeAnalyzeImageTool(args, chatId) {
  * Execute generate_audio tool with proper parameter mapping
  */
 async function executeGenerateAudioTool(args, chatId) {
-  const { text, options = {} } = args;
+  const { texts, options = {} } = args;
   
-  Logger.log(`Generate Audio: "${text.substring(0, 100)}..." with options: ${JSON.stringify(options)}`);
+  // Handle backward compatibility - if old 'text' parameter is used
+  const textArray = texts || (args.text ? [args.text] : []);
   
-  const result = await generate_audio(text, options, chatId);
+  Logger.log(`Generate Audio: ${textArray.length} messages, first: "${textArray[0]?.substring(0, 100)}..." with options: ${JSON.stringify(options)}`);
+  
+  const result = await generate_audio(textArray, options, chatId);
   return result;
 }
 
@@ -396,8 +399,12 @@ export function getToolExecutionDescription(functionName, functionArgs) {
         `Analyzing ${contentType}: "${imgInstruction}"`;
         
     case 'generate_audio':
-      const { text: audioText } = functionArgs;
-      return `🎤 Generating audio from text (${audioText?.length || 0} chars)`;
+      const { texts: audioTexts, text: audioText } = functionArgs;
+      const textArray = audioTexts || (audioText ? [audioText] : []);
+      const totalChars = textArray.reduce((sum, text) => sum + (text?.length || 0), 0);
+      return textArray.length > 1 
+        ? `🎤 Generating ${textArray.length} audio messages (${totalChars} chars total)`
+        : `🎤 Generating audio from text (${totalChars} chars)`;
         
     case 'send_messages':
       return `Sending ${functionArgs.messages?.length || 1} chat messages`;

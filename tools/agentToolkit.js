@@ -494,18 +494,26 @@ function formatTranscriptResults(messages, timeframe) {
  * @returns {Promise<string>} Success message
  */
 export const generate_audio = createToolWrapper(
-  async (text, options = {}, chatId) => {
+  async (texts, options = {}, chatId) => {
     if (!chatId) {
       throw new Error('Chat ID is required for audio generation');
     }
 
-    // Check daily usage limit for audio generation
+    // Handle both single text and array of texts for backward compatibility
+    const textArray = Array.isArray(texts) ? texts : [texts];
+    
+    if (textArray.length === 0) {
+      throw new Error('At least one text is required for audio generation');
+    }
+
+    // Check daily usage limit for audio generation (each text counts as one usage)
     const { checkDailyLimit, recordUsage, getUsageLimitMessage } = await import('../services/usageLimits.js');
     const limitCheck = await checkDailyLimit(chatId.toString(), 'AUDIO_GENERATION');
     
-    if (!limitCheck.allowed) {
+    // Check if we would exceed the limit with all requested audio generations
+    if (limitCheck.currentCount + textArray.length > limitCheck.limit) {
       const errorMessage = getUsageLimitMessage('AUDIO_GENERATION', limitCheck);
-      Logger.log(`Audio generation blocked for chat ${chatId}: daily limit exceeded (${limitCheck.currentCount}/${limitCheck.limit})`);
+      Logger.log(`Audio generation blocked for chat ${chatId}: would exceed daily limit (${limitCheck.currentCount + textArray.length}/${limitCheck.limit})`);
       
       // Track usage limit hit
       const { Analytics } = await import('../services/analytics.js');
@@ -523,45 +531,72 @@ export const generate_audio = createToolWrapper(
       };
     }
 
-    // Check if this is an appropriate use case
-    if (!shouldGenerateAudio(text)) {
-      Logger.log(`Audio generation may not be appropriate for: "${text.substring(0, 100)}..."`, 'warn');
-    }
-
-    Logger.log(`Generating audio for chat ${chatId}: "${text.substring(0, 100)}..." (${limitCheck.remaining - 1} remaining today)`);
+    Logger.log(`Generating ${textArray.length} audio messages for chat ${chatId} (${limitCheck.remaining - textArray.length} remaining today)`);
 
     try {
-      // Generate audio using the smart generation function
-      const { buffer: audioBuffer, metadata } = await generateAudioSmart(text, options);
-
       // Import TelegramAPI here to avoid circular dependency
       const { TelegramAPI } = await import('../services/telegramAPI.js');
-
-      // Always send as voice message (no audio files)
-      const duration = Math.ceil(metadata.estimatedDuration);
-
-      // Send as voice message
-      const sentMessage = await TelegramAPI.sendVoice(chatId, audioBuffer, {
-        caption: `🎤 Voice message (${duration}s)`,
-        duration: duration,
-        parse_mode: 'Markdown'
-      });
-
-      Logger.log(`Sent voice message ${sentMessage.message_id} to chat ${chatId}`);
-      
-      // Record successful usage and track analytics
-      await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
-      
       const { Analytics } = await import('../services/analytics.js');
-      Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'voice', true);
       
-      // Return special marker to end conversation loop after audio generation
+      const messageIds = [];
+      let totalDuration = 0;
+      let totalCharacters = 0;
+
+      // Generate and send each audio message with delays
+      for (let i = 0; i < textArray.length; i++) {
+        const currentText = textArray[i];
+        
+        // Check if this is an appropriate use case
+        if (!shouldGenerateAudio(currentText)) {
+          Logger.log(`Audio generation may not be appropriate for text ${i + 1}: "${currentText.substring(0, 100)}..."`, 'warn');
+        }
+
+        Logger.log(`Generating audio ${i + 1}/${textArray.length}: "${currentText.substring(0, 100)}..."`);
+
+        // Generate audio using the smart generation function
+        const { buffer: audioBuffer, metadata } = await generateAudioSmart(currentText, options);
+        const duration = Math.ceil(metadata.estimatedDuration);
+
+        // Send as voice message with progress indicator
+        const caption = textArray.length > 1 
+          ? `🎤 Voice message ${i + 1}/${textArray.length} (${duration}s)`
+          : `🎤 Voice message (${duration}s)`;
+
+        const sentMessage = await TelegramAPI.sendVoice(chatId, audioBuffer, {
+          caption,
+          duration: duration,
+          parse_mode: 'Markdown'
+        });
+
+        Logger.log(`Sent voice message ${i + 1}/${textArray.length}: ${sentMessage.message_id} to chat ${chatId}`);
+        
+        messageIds.push(sentMessage.message_id);
+        totalDuration += duration;
+        totalCharacters += metadata.processedLength;
+        
+        // Record successful usage and track analytics for each audio
+        await recordUsage(chatId.toString(), 'AUDIO_GENERATION');
+        Analytics.trackAudioGeneration(chatId, metadata.processedLength, duration, 'voice', true);
+        
+        // Add delay between voice messages (except after the last one)
+        if (i < textArray.length - 1) {
+          const baseDelay = 1500; // Base 1.5s delay for audio
+          const durationBonus = Math.min(duration * 100, 2000); // Based on audio duration, max 2s bonus
+          const audioDelay = baseDelay + durationBonus; // 1.5s to 3.5s total
+          
+          Logger.log(`Audio delay: ${audioDelay}ms before next voice message`);
+          await new Promise(resolve => setTimeout(resolve, audioDelay));
+        }
+      }
+      
+      // Return special marker to end conversation loop after all audio generation
       return {
         __MESSAGES_SENT__: true,
         audioType: 'voice',
-        duration: duration,
-        characters: metadata.processedLength,
-        messageId: sentMessage.message_id
+        count: textArray.length,
+        duration: totalDuration,
+        characters: totalCharacters,
+        messageIds: messageIds
       };
 
     } catch (error) {

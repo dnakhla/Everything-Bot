@@ -149,9 +149,10 @@ const ALL_TOOLS = {
         parameters: {
           type: 'object',
           properties: {
-            text: { 
-              type: 'string',
-              description: 'Text to convert to speech. Must be 140-150 words maximum for 1-minute audio.'
+            texts: { 
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Array of texts to convert to speech. Each text must be 140-150 words maximum for 1-minute audio. Multiple texts will be sent as separate voice messages.'
             },
             options: { 
               type: 'object',
@@ -164,15 +165,15 @@ const ALL_TOOLS = {
               }
             }
           },
-          required: ['text']
+          required: ['texts']
         }
       }
     },
     documentation: `**🎤 GENERATE_AUDIO TOOL** - AI text-to-speech generation:
-• generate_audio("Welcome to our podcast", {}) - Generate audio-only response
+• generate_audio({texts: ["Part 1", "Part 2"]}, {}) - Generate multiple voice messages
 • WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed)
-• Creates exactly ONE voice message containing complete response
-• CRITICAL: Keep text to 140-150 words maximum (1-minute audio limit)
+• Creates separate voice messages for each text with delays between them
+• CRITICAL: Keep each text to 140-150 words maximum (1-minute audio limit per message)
 • Only use when user explicitly requests audio, voice files, or podcast content`,
     useCases: ['Create podcast-style content', 'Generate voice responses', 'Convert text to audio for accessibility', 'Create voice narrations'],
     requiresFeatureFlag: 'REPLICATE_API_TOKEN'
