@@ -81,7 +81,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
     // Send initial processing message (not saved to history)
     fetchingMessage = await TelegramAPI.sendMessage(
       chatId,
-      'Processing your question...',
+      '🤔 Let me think about this...',
       { reply_to_message_id: request_message_id }
     );
     
@@ -243,19 +243,92 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
       }
     }
 
-    // Handle final response or timeout
+    // Handle final response or emergency forced response
     if (finalResponse && !messagesSent) {
       await sendFinalMessages(chatId, finalResponse, fetchingMessage, request_message_id);
       messagesSent = true;
       Logger.log(`Final response sent and should be saved via sendFinalMessages`);
     } else if (!messagesSent) {
-      Logger.log(`Maximum loops (${MAX_LOOPS}) reached without final response`);
-      const timeoutMessage = await safeEditMessage(chatId, fetchingMessage?.message_id, 
-        'I was unable to complete your request within the time limit. Please try a simpler question.');
-      // Save the timeout message
-      if (timeoutMessage) {
-        await saveBotMessage(chatId, timeoutMessage);
-        Logger.log(`Saved timeout message ${timeoutMessage.message_id} to S3`);
+      Logger.log(`Maximum loops (${MAX_LOOPS}) reached without final response - attempting emergency forced response`);
+      
+      // Emergency forced response - one final attempt with send_messages only
+      try {
+        await safeEditMessage(chatId, fetchingMessage?.message_id, '🚨 Emergency mode: Forcing response with available information...');
+        
+        const emergencyResponse = await openai.chat.completions.create({
+          model: CONFIG.GPT_MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: `# EMERGENCY RESPONSE MODE
+🚨 CRITICAL: You have reached the maximum research loops and MUST respond now.
+
+URGENT INSTRUCTIONS:
+- Use ONLY the send_messages tool to respond
+- NO other tools allowed - respond with whatever information you have
+- Provide the best answer possible with accumulated research
+- If you don't have complete info, acknowledge limitations but still help
+- Be honest about what you found vs what you couldn't find
+- MANDATORY: You MUST use send_messages tool - no exceptions
+
+Your response will be based on available research context below.`
+            },
+            {
+              role: 'user',
+              content: `EMERGENCY: Must respond to: "${user_query}"
+
+Available research context:
+${accumulatedContext || 'No specific research completed, use general knowledge.'}
+
+Recent conversation:
+${conversation}
+
+RESPOND NOW using send_messages tool with whatever helpful information you can provide.`
+            }
+          ],
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'send_messages',
+                description: 'Send final response messages to the user. This ENDS the conversation loop.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    messages: { type: 'array', items: { type: 'string' } }
+                  },
+                  required: ['messages']
+                }
+              }
+            }
+          ],
+          tool_choice: { type: 'function', function: { name: 'send_messages' } }, // Force send_messages
+          temperature: 0.7,
+          max_tokens: 2000
+        });
+
+        const emergencyMessage = emergencyResponse.choices[0].message;
+        if (emergencyMessage.tool_calls && emergencyMessage.tool_calls.length > 0) {
+          const toolCall = emergencyMessage.tool_calls[0];
+          if (toolCall.function.name === 'send_messages') {
+            const functionArgs = JSON.parse(toolCall.function.arguments);
+            await sendFinalMessages(chatId, functionArgs.messages, fetchingMessage, request_message_id);
+            messagesSent = true;
+            Logger.log(`Emergency forced response successful`);
+          }
+        } else {
+          throw new Error('Emergency response did not use send_messages tool');
+        }
+        
+      } catch (emergencyError) {
+        Logger.log(`Emergency forced response failed: ${emergencyError.message}`, 'error');
+        // Fallback to timeout message
+        const timeoutMessage = await safeEditMessage(chatId, fetchingMessage?.message_id, 
+          '⏰ I ran into technical difficulties while trying to respond. Even my emergency response failed! Please try asking again. 🔧');
+        if (timeoutMessage) {
+          await saveBotMessage(chatId, timeoutMessage);
+          Logger.log(`Saved fallback timeout message ${timeoutMessage.message_id} to S3`);
+        }
       }
     }
 
@@ -420,7 +493,8 @@ export async function handleHelpCommand(chatId) {
 
 **Commands:**
 • \`/help\` - Show this help message
-• \`/clearmessages [number]\` - Delete bot's last messages (default: 4, max: 20)
+• \`/clearmessages\` - Delete bot's last response session only
+• \`/clearmessages [number]\` - Delete specific number of recent bot messages (max: 20)
 • \`/cancel\` - Cancel current bot operation
 • \`/usage\` - Check daily usage limits (audio generation: 5/day)
 
@@ -509,10 +583,13 @@ async function deleteBotMessages(chatId, count) {
   try {
     // Get stored messages from S3
     const key = `fact_checker_bot/groups/${chatId}.json`;
+    Logger.log(`Looking for messages at S3 key: ${key}`);
     const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
     
     if (!existingData || !existingData.messages) {
-      Logger.log(`No messages found in S3 for chat ${chatId}`);
+      Logger.log(`No messages found in S3 for chat ${chatId} at key ${key}`);
+      Logger.log(`Bucket: ${CONFIG.S3_BUCKET_NAME}`);
+      Logger.log(`Existing data:`, existingData);
       return { deletedFromTelegram, deletedFromS3 };
     }
     
@@ -557,23 +634,129 @@ async function deleteBotMessages(chatId, count) {
 }
 
 /**
+ * Delete only messages from the last bot response session
+ * @param {string|number} chatId - The chat ID
+ * @returns {Promise<{deletedFromTelegram: number, deletedFromS3: number}>}
+ */
+async function deleteLastSessionMessages(chatId) {
+  let deletedFromTelegram = 0;
+  let deletedFromS3 = 0;
+  
+  try {
+    // Get stored messages from S3
+    const key = `fact_checker_bot/groups/${chatId}.json`;
+    Logger.log(`Looking for last session messages at S3 key: ${key}`);
+    const existingData = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, key);
+    
+    if (!existingData || !existingData.messages) {
+      Logger.log(`No messages found in S3 for chat ${chatId} at key ${key}`);
+      return { deletedFromTelegram, deletedFromS3 };
+    }
+    
+    // Sort all messages by timestamp (newest first)
+    const allMessages = existingData.messages
+      .sort((a, b) => (b.timestamp?.unix || 0) - (a.timestamp?.unix || 0));
+    
+    // Find the most recent bot message (start of last session)
+    const firstBotMessageIndex = allMessages.findIndex(msg => msg.isBot && msg.messageId);
+    
+    if (firstBotMessageIndex === -1) {
+      Logger.log(`No bot messages found to delete`);
+      return { deletedFromTelegram, deletedFromS3 };
+    }
+    
+    // Find all consecutive bot messages from the most recent session
+    const lastSessionMessages = [];
+    for (let i = firstBotMessageIndex; i < allMessages.length; i++) {
+      const msg = allMessages[i];
+      if (msg.isBot && msg.messageId) {
+        lastSessionMessages.push(msg);
+      } else {
+        // Stop when we hit a non-bot message (end of the session)
+        break;
+      }
+    }
+    
+    Logger.log(`Found ${lastSessionMessages.length} messages in last bot response session`);
+    
+    // Delete from Telegram first
+    for (const message of lastSessionMessages) {
+      try {
+        await TelegramAPI.deleteMessage(chatId, message.messageId);
+        deletedFromTelegram++;
+        Logger.log(`Deleted session message ${message.messageId} from Telegram`);
+      } catch (error) {
+        Logger.log(`Failed to delete session message ${message.messageId} from Telegram: ${error.message}`, 'warn');
+        // Continue even if Telegram deletion fails
+      }
+    }
+    
+    // Remove from S3 storage
+    const messageIdsToDelete = lastSessionMessages.map(msg => msg.messageId);
+    existingData.messages = existingData.messages.filter(msg => 
+      !messageIdsToDelete.includes(msg.messageId)
+    );
+    
+    // Save updated data back to S3
+    await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, key, existingData);
+    deletedFromS3 = messageIdsToDelete.length;
+    
+    Logger.log(`Deleted ${deletedFromS3} session messages from S3 storage`);
+    
+  } catch (error) {
+    Logger.log(`Error in deleteLastSessionMessages: ${error.message}`, 'error');
+    throw error;
+  }
+  
+  return { deletedFromTelegram, deletedFromS3 };
+}
+
+/**
  * Handle clear messages command - deletes bot's recent messages from Telegram and S3
  * @param {string|number} chatId - The chat ID
  * @param {number} count - Number of bot messages to delete (default: 4)
  */
-export async function handleClearMessagesCommand(chatId, count = 4) {
+export async function handleClearMessagesCommand(chatId, count = null, explicitCount = false) {
   try {
-    // Validate count parameter
-    const numToDelete = Math.max(1, Math.min(count, 20)); // Limit between 1 and 20
+    Logger.log(`handleClearMessagesCommand called for chat ${chatId}, count: ${count}, explicitCount: ${explicitCount}`);
     
-    // Just delete the messages silently, no status or confirmation messages
-    const { deletedFromTelegram, deletedFromS3 } = await deleteBotMessages(chatId, numToDelete);
+    let statusMsg;
+    let deletedFromTelegram, deletedFromS3;
     
-    Logger.log(`Silently deleted ${deletedFromTelegram} messages from Telegram and ${deletedFromS3} from S3 storage`);
+    if (explicitCount) {
+      // User provided a specific number - use old behavior
+      const numToDelete = Math.max(1, Math.min(count, 20)); // Limit between 1 and 20
+      statusMsg = await TelegramAPI.sendMessage(chatId, `🧹 Cleaning up ${numToDelete} messages...`);
+      ({ deletedFromTelegram, deletedFromS3 } = await deleteBotMessages(chatId, numToDelete));
+    } else {
+      // No number provided - smart mode: delete only messages from last bot response session
+      statusMsg = await TelegramAPI.sendMessage(chatId, `🧹 Erasing my last response...`);
+      ({ deletedFromTelegram, deletedFromS3 } = await deleteLastSessionMessages(chatId));
+    }
+    
+    // Update the status message with results
+    const resultText = explicitCount 
+      ? `✨ Cleaned up ${deletedFromTelegram} messages! All gone! 🫧`
+      : `✨ Erased last response session: ${deletedFromTelegram} messages vanished! 💨`;
+    
+    await TelegramAPI.editMessageText(chatId, statusMsg.message_id, resultText);
+    
+    Logger.log(`Deleted ${deletedFromTelegram} messages from Telegram and ${deletedFromS3} from S3 storage`);
+    
+    // Delete the status message after 1 second
+    setTimeout(async () => {
+      try {
+        await TelegramAPI.deleteMessage(chatId, statusMsg.message_id);
+      } catch (err) {
+        Logger.log(`Failed to delete status message: ${err.message}`);
+      }
+    }, 1000);
+    
   } catch (error) {
     Logger.log(`Error in handleClearMessagesCommand: ${error.message}`, 'error');
+    Logger.log(error.stack, 'error');
     await TelegramAPI.sendMessage(chatId, 
-      '❌ Failed to delete messages. Please try again later.'
+      `❌ Failed to delete messages: ${error.message}`
     );
   }
 }
@@ -605,14 +788,18 @@ export async function handleMessage(chatId, text, message) {
   } else if (text.startsWith('/clearmessages')) {
     // Parse optional number parameter
     const parts = text.split(' ');
-    let count = 4; // default
+    let count = null; // null means "smart mode" - delete only last session
+    let explicitCount = false;
+    
     if (parts.length > 1) {
       const parsed = parseInt(parts[1]);
       if (!isNaN(parsed) && parsed > 0) {
         count = parsed;
+        explicitCount = true;
       }
     }
-    await handleClearMessagesCommand(chatId, count);
+    
+    await handleClearMessagesCommand(chatId, count, explicitCount);
   } else if (text.startsWith('/cancel')) {
     requestCancellation(chatId);
     await TelegramAPI.sendMessage(chatId, '🛑 Cancellation requested. The bot will stop processing after the current operation.', { 
@@ -654,27 +841,16 @@ export async function handleBotAddedToChat(chatId, chat) {
   try {
     Logger.log(`Sending introduction message to chat ${chatId} (${chat.title || 'Unknown'})`);
     
-    const introMessage = `👋 Hello everyone! I'm @LetMeCheckThatBot, your intelligent AI assistant.
+    const introMessage = `👋 Hey there! I'm here to help by looking stuff up using the web, analyzing images, doing calculations, and more.
 
-🔍 **What I can do:**
-• Search the web, news, Reddit, images, and videos
-• Analyze chat history and find specific messages
-• Process images with OCR and visual analysis
-• Perform calculations and data analysis
-• Provide summaries and insights
+Just summon me by starting your message with "robot" or type /help for more info.
 
-🗣️ **How to use me:**
-• Start messages with "robot," or "robot " to ask questions
-• Use personality modes like "conspiracy-bot," or "scientist-bot,"
-• Send /help for detailed usage instructions
+Examples:
+• robot what's the weather today?
+• robot analyze this image
+• scientist-bot explain quantum physics
 
-🎯 **Examples:**
-• "robot, what's the latest news on AI?"
-• "conservative-bot, what are the benefits of renewable energy?"
-• "robot analyze the images I shared yesterday"
-• "robot calculate 15% tip on $87.50"
-
-Ready to help with factual, evidence-based responses! 🤖`;
+Ready to assist! 🤖`;
 
     await TelegramAPI.sendMessage(chatId, introMessage);
     Logger.log(`Introduction sent successfully to chat ${chatId}`);

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Admin Page</title>
+</head>
+<body>
+    <h1>Admin Dashboard Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <div id="result"></div>
+    
+    <script>
+        function testAPI() {
+            document.getElementById('result').innerHTML = 'Testing...';
+            
+            fetch('/api/rooms')
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    document.getElementById('result').innerHTML = 'API working! Found ' + data.length + ' rooms';
+                })
+                .catch(function(error) {
+                    document.getElementById('result').innerHTML = 'API Error: ' + error.message;
+                });
+        }
+    </script>
+</body>
+</html>

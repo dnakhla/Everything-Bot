@@ -1,0 +1,28 @@
+{
+  "name": "everything-bot-admin",
+  "version": "1.0.0",
+  "description": "Admin interface for Everything Bot",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "./start-dev.sh",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server.js",
+    "admin": "node server-manager.js",
+    "stop": "pkill -f 'node server.js' || true",
+    "prod": "./build-and-serve.sh"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@aws-sdk/client-s3": "^3.400.0",
+    "@aws-sdk/client-lambda": "^3.400.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "svelte": "^4.0.0",
+    "vite": "^5.0.0",
+    "nodemon": "^3.0.1"
+  }
+}

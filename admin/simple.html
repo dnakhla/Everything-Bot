@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Everything Bot Admin</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .header { background: #232f3e; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        .content { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .btn { background: #ff9900; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn:hover { background: #e68900; }
+        .room-card { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; background: #f9f9f9; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; display: none; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Everything Bot Admin Dashboard</h1>
+        <p>Simple admin interface for managing bot settings</p>
+    </div>
+
+    <div class="content">
+        <h2>Room Management</h2>
+        <button class="btn" onclick="loadRooms()">Load Rooms</button>
+        <div id="room-list"></div>
+        
+        <h2>Test API</h2>
+        <button class="btn" onclick="testAPI()">Test Connection</button>
+        <div id="test-result"></div>
+    </div>
+
+    <div id="status-area"></div>
+
+    <script>
+        function showStatus(message, type) {
+            var status = document.getElementById('status-area');
+            status.innerHTML = '<div class="status ' + type + '">' + message + '</div>';
+            status.querySelector('.status').style.display = 'block';
+            setTimeout(function() {
+                status.innerHTML = '';
+            }, 5000);
+        }
+
+        function testAPI() {
+            showStatus('Testing API connection...', 'info');
+            var result = document.getElementById('test-result');
+            
+            fetch('/api/rooms')
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    result.innerHTML = '<p style="color: green;">✓ API working! Found ' + data.length + ' rooms</p>';
+                    showStatus('API connection successful', 'success');
+                })
+                .catch(function(error) {
+                    result.innerHTML = '<p style="color: red;">✗ API Error: ' + error.message + '</p>';
+                    showStatus('API connection failed', 'error');
+                });
+        }
+
+        function loadRooms() {
+            showStatus('Loading rooms...', 'info');
+            var roomList = document.getElementById('room-list');
+            roomList.innerHTML = '<p>Loading...</p>';
+            
+            fetch('/api/rooms')
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(rooms) {
+                    var html = '';
+                    for (var i = 0; i < rooms.length; i++) {
+                        var room = rooms[i];
+                        html += '<div class="room-card">';
+                        html += '<h3>' + room.name + '</h3>';
+                        html += '<p>ID: ' + room.id + '</p>';
+                        html += '<p>Messages: ' + room.messages + '</p>';
+                        html += '<p>Type: ' + room.type + '</p>';
+                        html += '<button class="btn" onclick="viewRoom(\'' + room.id + '\')">View Details</button>';
+                        html += '</div>';
+                    }
+                    
+                    if (rooms.length === 0) {
+                        html = '<p>No rooms found.</p>';
+                    }
+                    
+                    roomList.innerHTML = html;
+                    showStatus('Loaded ' + rooms.length + ' rooms', 'success');
+                })
+                .catch(function(error) {
+                    roomList.innerHTML = '<p style="color: red;">Error loading rooms: ' + error.message + '</p>';
+                    showStatus('Failed to load rooms', 'error');
+                });
+        }
+
+        function viewRoom(roomId) {
+            showStatus('Loading room details...', 'info');
+            
+            fetch('/api/chat/' + roomId)
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(chatData) {
+                    var popup = window.open('', 'chat', 'width=800,height=600,scrollbars=yes');
+                    var html = '<html><head><title>Chat Details</title></head>';
+                    html += '<body style="font-family: Arial, sans-serif; margin: 20px;">';
+                    html += '<h2>Room: ' + roomId + '</h2>';
+                    html += '<p>Messages: ' + (chatData.messages ? chatData.messages.length : 0) + '</p>';
+                    html += '</body></html>';
+                    popup.document.write(html);
+                    showStatus('Room details loaded', 'success');
+                })
+                .catch(function(error) {
+                    showStatus('Failed to load room details', 'error');
+                });
+        }
+
+        // Test on page load
+        window.onload = function() {
+            testAPI();
+        };
+    </script>
+</body>
+</html>

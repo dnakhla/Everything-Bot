@@ -10,14 +10,45 @@ import { Logger } from '../utils/logger.js';
 import { CONFIG } from '../config.js';
 
 /**
- * Daily limits for different operations
+ * Default daily limits for different operations (fallback when config is unavailable)
  */
-const DAILY_LIMITS = {
+const DEFAULT_DAILY_LIMITS = {
   AUDIO_GENERATION: 5, // Max 5 audio generations per user per day
   SEARCH_QUERIES: 100, // Max 100 search queries per user per day
   LLM_TOKENS: 50000, // Max 50k tokens per user per day
   LLM_CALLS: 200 // Max 200 LLM calls per user per day
 };
+
+/**
+ * Get configurable limits for a specific chat/user
+ * @param {string} chatId - Chat/User ID
+ * @returns {Promise<Object>} Configured limits or defaults
+ */
+async function getConfiguredLimits(chatId) {
+  try {
+    // Get configured limits from S3
+    const usageLimits = await S3Manager.getFromS3(CONFIG.S3_BUCKET_NAME, 'config/usage_limits.json');
+    
+    if (usageLimits && usageLimits[chatId]) {
+      const roomLimits = usageLimits[chatId];
+      
+      // Use the operation names directly if they exist, otherwise fall back to legacy mapping
+      return {
+        AUDIO_GENERATION: roomLimits.AUDIO_GENERATION || roomLimits.maxPodcastGenerations || DEFAULT_DAILY_LIMITS.AUDIO_GENERATION,
+        SEARCH_QUERIES: roomLimits.SEARCH_QUERIES || roomLimits.maxWebSearches || DEFAULT_DAILY_LIMITS.SEARCH_QUERIES,
+        LLM_TOKENS: roomLimits.LLM_TOKENS || roomLimits.dailyTokenLimit || DEFAULT_DAILY_LIMITS.LLM_TOKENS,
+        LLM_CALLS: roomLimits.LLM_CALLS || roomLimits.dailyMessageLimit || DEFAULT_DAILY_LIMITS.LLM_CALLS
+      };
+    }
+    
+    // Return defaults if no room-specific config found
+    return DEFAULT_DAILY_LIMITS;
+  } catch (error) {
+    Logger.log(`Error getting configured limits for ${chatId}: ${error.message}`, 'warn');
+    // Return defaults if config loading fails
+    return DEFAULT_DAILY_LIMITS;
+  }
+}
 
 /**
  * Check if user has exceeded daily limit for a specific operation
@@ -28,7 +59,15 @@ const DAILY_LIMITS = {
 export async function checkDailyLimit(chatId, operation) {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
   const usageKey = `fact_checker_bot/groups/${chatId}/usage/${today}.json`;
-  const limit = DAILY_LIMITS[operation] || 10; // Default limit if not specified
+  
+  // Get configured limits for this chat
+  const configuredLimits = await getConfiguredLimits(chatId);
+  const limit = configuredLimits[operation] || 10; // Default limit if not specified
+  
+  // Debug logging
+  Logger.log(`checkDailyLimit for ${chatId}, operation: ${operation}`);
+  Logger.log(`Configured limits:`, configuredLimits);
+  Logger.log(`Resolved limit for ${operation}: ${limit}`);
   
   // Calculate reset time (midnight UTC)
   const tomorrow = new Date();
@@ -113,7 +152,10 @@ export async function recordUsage(chatId, operation, amount = 1) {
     // Upsert: Save updated usage (will create or update)
     await S3Manager.saveToS3(CONFIG.S3_BUCKET_NAME, usageKey, currentUsage);
     
-    Logger.log(`Recorded usage for ${chatId} - ${operation}: ${currentUsage[operation]}/${DAILY_LIMITS[operation] || 10}`);
+    // Get current limit for logging
+    const configuredLimits = await getConfiguredLimits(chatId);
+    const currentLimit = configuredLimits[operation] || 10;
+    Logger.log(`Recorded usage for ${chatId} - ${operation}: ${currentUsage[operation]}/${currentLimit}`);
     
   } catch (error) {
     Logger.log(`Error recording usage: ${error.message}`, 'error');
@@ -152,7 +194,7 @@ This helps us manage costs and ensure fair usage for everyone! 😊`;
  * @returns {boolean} True if operation should be tracked
  */
 export function shouldTrackUsage(operation) {
-  return Object.hasOwnProperty.call(DAILY_LIMITS, operation);
+  return Object.hasOwnProperty.call(DEFAULT_DAILY_LIMITS, operation);
 }
 
 /**
@@ -203,5 +245,6 @@ export default {
   checkLLMUsage,
   getUsageLimitMessage,
   shouldTrackUsage,
-  DAILY_LIMITS
+  getConfiguredLimits,
+  DEFAULT_DAILY_LIMITS
 };

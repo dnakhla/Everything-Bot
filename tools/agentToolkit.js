@@ -737,8 +737,8 @@ export const AGENT_TOOLKIT = {
       'Convert research findings into audio format',
       'Create voice narrations as final response'
     ],
-    important: 'WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed). Creates exactly ONE audio file. MAX 1 MINUTE (1000 characters).',
-    workflow: 'Research → generate_audio → END (audio-only response, max 1 minute)'
+    important: 'WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed). Creates exactly ONE audio file. MAX 1 MINUTE (1300 characters).',
+    workflow: 'Research → generate_audio → END (audio-only response, max 200 words)'
   }
 };
 

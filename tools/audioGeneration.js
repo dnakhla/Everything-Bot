@@ -14,10 +14,9 @@ import { CONFIG } from '../config.js';
  * Generate audio from text using Replicate API
  * @param {string} text - Text to convert to speech
  * @param {Object} options - Generation options
- * @param {number} options.seed - Random seed (default: 0)
- * @param {number} options.cfg_weight - CFG weight (default: 0.5)
- * @param {number} options.temperature - Temperature (default: 0.8)
- * @param {number} options.exaggeration - Emotion exaggeration (default: 0.5)
+ * @param {number} options.cfg_weight - CFG/Pace weight (0.2 to 1, default: 0.5)
+ * @param {number} options.temperature - Voice randomness (0.05 to 1.0, default: 0.8)
+ * @param {number} options.exaggeration - Voice expressiveness (0.25 to 2, default: 0.5)
  * @returns {Promise<Buffer>} Audio file buffer
  */
 export async function generateAudio(text, options = {}) {
@@ -29,21 +28,22 @@ export async function generateAudio(text, options = {}) {
     throw new Error('Text is required for audio generation');
   }
 
-  // Limit text length to ~60 seconds of speech (approximately 150 words)
-  // At normal speech rate (~150 words/min), 60 seconds = ~150 words
+  // Allow up to 200 words per audio segment (no truncation)
   const wordCount = text.split(/\s+/).length;
-  if (wordCount > 150) {
-    const words = text.split(/\s+/).slice(0, 150);
-    text = words.join(' ') + '...';
-    Logger.log(`Text truncated from ${wordCount} to 150 words for 1-minute audio limit`, 'warn');
-  }
+  Logger.log(`Generating audio for ${wordCount} words`);
 
   const {
-    seed = 0,
     cfg_weight = 0.5,
     temperature = 0.8,
     exaggeration = 0.5
   } = options;
+
+  // Validate parameter ranges
+  const validatedOptions = {
+    cfg_weight: Math.max(0.2, Math.min(1, cfg_weight)),
+    temperature: Math.max(0.05, Math.min(1.0, temperature)),
+    exaggeration: Math.max(0.25, Math.min(2, exaggeration))
+  };
 
   Logger.log(`Generating audio for text (${text.length} chars) with Replicate API`);
 
@@ -53,11 +53,11 @@ export async function generateAudio(text, options = {}) {
       'https://api.replicate.com/v1/models/resemble-ai/chatterbox/predictions',
       {
         input: {
-          seed,
+          seed: 0, // Always use random seed
           prompt: text,
-          cfg_weight,
-          temperature,
-          exaggeration
+          cfg_weight: validatedOptions.cfg_weight,
+          temperature: validatedOptions.temperature,
+          exaggeration: validatedOptions.exaggeration
         }
       },
       {
@@ -147,22 +147,22 @@ export async function generateAudioSmart(text, options = {}) {
 
   // Add natural speech markers for better audio
   if (cleanText.length > 50) {
-    // Add slight pauses after sentences
-    cleanText = cleanText.replace(/\. /g, '. ... ');
+    // Add slight pauses after sentences (removed ellipses for cleaner text)
+    cleanText = cleanText.replace(/\. /g, '. ');
   }
 
   const audioBuffer = await generateAudio(cleanText, options);
   
   // Use word-based duration estimation (150 words per minute = 2.5 words per second)
   const wordCount = cleanText.split(/\s+/).length;
-  const actualDuration = Math.min(wordCount / 2.5, 60);
+  const actualDuration = Math.min(wordCount / 2.5, 80);
   
   const metadata = {
     originalLength: text.length,
     processedLength: cleanText.length,
     originalWordCount: text.split(/\s+/).length,
     processedWordCount: wordCount,
-    estimatedDuration: actualDuration, // ~2.5 words per second, max 60 seconds
+    estimatedDuration: actualDuration, // ~2.5 words per second, max 80 seconds for 200 words
     actualDuration: actualDuration,
     options: options
   };

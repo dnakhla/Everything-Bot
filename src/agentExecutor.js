@@ -311,23 +311,32 @@ export function getToolExecutionDescription(functionName, functionArgs) {
         'places': 'places',
         'alternative': 'alternative sources'
       };
-      return `Searching ${topicMap[topic] || topic} for: "${query}"`;
+      const searchEmojis = {
+        'web': '🌐 Searching the web',
+        'news': '📰 Reading the latest news',
+        'reddit': '👥 Browsing Reddit discussions',
+        'images': '🖼️ Looking for images',
+        'videos': '🎬 Finding videos',
+        'places': '📍 Exploring places',
+        'alternative': '🔍 Checking alternative sources'
+      };
+      return `${searchEmojis[topic] || '🔍 Searching'} for: "${query}"`;
       
     case 'messages':
       const { action, params = {} } = functionArgs;
       switch (action) {
         case 'get':
-          return `Retrieving messages from ${params.timeframe || '24h'}`;
+          return `📜 Reading through messages from ${params.timeframe || '24h'}`;
         case 'search':
-          return `Searching chat history for: "${params.query}"`;
+          return `🔍 Digging through chat history for: "${params.query}"`;
         case 'summary':
-          return `Generating conversation summary (${params.timeframe || '24h'})`;
+          return `📝 Summarizing our conversation (${params.timeframe || '24h'})`;
         case 'filter':
-          return `Filtering messages by: ${params.criteria}`;
+          return `🎯 Filtering messages by: ${params.criteria}`;
         case 'range':
-          return `Retrieving messages from ${params.startDate} to ${params.endDate}`;
+          return `📅 Pulling messages from ${params.startDate} to ${params.endDate}`;
         default:
-          return `Processing messages (${action})`;
+          return `💬 Processing messages (${action})`;
       }
       
     case 'images':
@@ -335,26 +344,26 @@ export function getToolExecutionDescription(functionName, functionArgs) {
       switch (imgAction) {
         case 'find':
           return imgParams.date ? 
-            `Finding images from ${imgParams.date}` : 
-            `Finding images from ${imgParams.timeframe || '24h'}`;
+            `🖼️ Looking for images from ${imgParams.date}` : 
+            `🖼️ Scanning for images from ${imgParams.timeframe || '24h'}`;
         case 'analyze':
-          return `Analyzing images for: "${imgParams.query}"`;
+          return `👁️ Analyzing images for: "${imgParams.query}"`;
         case 'extract-text':
-          return `Extracting text from images (${imgParams.timeframe || '24h'})`;
+          return `📖 Reading text from images (${imgParams.timeframe || '24h'})`;
         case 'search':
-          return `Searching images for: "${imgParams.query}"`;
+          return `🔍 Searching through images for: "${imgParams.query}"`;
         default:
-          return `Processing images (${imgAction})`;
+          return `🎨 Processing images (${imgAction})`;
       }
       
     case 'calculate':
-      return `Calculating: ${functionArgs.expression}`;
+      return `🧮 Calculating: ${functionArgs.expression}`;
       
     case 'analyze':
       const { action: analyzeAction = 'summarize' } = functionArgs;
       return analyzeAction === 'summarize' ? 
-        'Summarizing content' : 
-        'Analyzing data';
+        '📊 Summarizing content' : 
+        '🔬 Analyzing data';
         
     case 'browser':
       const { url: browserUrl, action: browserAction = 'scrape', options: browserOptions = {} } = functionArgs;
@@ -390,24 +399,24 @@ export function getToolExecutionDescription(functionName, functionArgs) {
         
     case 'fetch_url':
       const { url } = functionArgs;
-      return `📄 Fetching content from: ${url}`;
+      return `📄 Reading content from: ${url}`;
         
     case 'analyze_image':
       const { instruction: imgInstruction = 'analyze image', contentType = 'general' } = functionArgs;
       return contentType === 'general' ? 
-        `Analyzing image: "${imgInstruction}"` :
-        `Analyzing ${contentType}: "${imgInstruction}"`;
+        `👁️ Looking at image: "${imgInstruction}"` :
+        `🔍 Analyzing ${contentType}: "${imgInstruction}"`;
         
     case 'generate_audio':
       const { texts: audioTexts, text: audioText } = functionArgs;
       const textArray = audioTexts || (audioText ? [audioText] : []);
       const totalChars = textArray.reduce((sum, text) => sum + (text?.length || 0), 0);
       return textArray.length > 1 
-        ? `🎤 Generating ${textArray.length} audio messages (${totalChars} chars total)`
-        : `🎤 Generating audio from text (${totalChars} chars)`;
+        ? `🎙️ Recording ${textArray.length} voice messages (${totalChars} chars total)`
+        : `🎙️ Recording voice message (${totalChars} chars)`;
         
     case 'send_messages':
-      return `Sending ${functionArgs.messages?.length || 1} chat messages`;
+      return `💬 Preparing ${functionArgs.messages?.length || 1} response messages`;
         
     default:
       return `⚙️ Executing ${functionName}`;

@@ -100,22 +100,26 @@ const ALL_TOOLS = {
       type: 'function',
       function: {
         name: 'analyze_image',
-        description: 'Analyze images using GPT-4.1-mini vision capabilities.',
+        description: 'Analyze images using GPT-4.1-mini vision with custom prompts. Ask specific questions about images, extract text, identify objects, count items, or get detailed descriptions.',
         parameters: {
           type: 'object',
           properties: {
             imageData: { type: 'string' },
-            instruction: { type: 'string', default: 'analyze this image' },
+            instruction: { type: 'string', default: 'analyze this image', description: 'Custom prompt/question to ask about the image. Examples: "extract text", "what breed is this dog?", "count the people"' },
             contentType: { type: 'string', default: 'general' }
           },
           required: ['imageData']
         }
       }
     },
-    documentation: `**🖼️ ANALYZE_IMAGE TOOL** - AI-powered image analysis:
+    documentation: `**🖼️ ANALYZE_IMAGE TOOL** - AI-powered image analysis with custom prompts:
 • analyze_image(imageData, "describe this image") - General image description
-• analyze_image(imageData, "extract text from document") - OCR text extraction`,
-    useCases: ['Analyze uploaded images', 'Extract text from images', 'Identify objects in photos']
+• analyze_image(imageData, "extract all text from this document") - OCR text extraction
+• analyze_image(imageData, "what breed is this dog?") - Specific identification questions
+• analyze_image(imageData, "count the people in this photo") - Counting and analysis tasks
+• analyze_image(imageData, "is this a receipt? if so, what's the total?") - Receipt analysis
+• analyze_image(imageData, "explain what this code does") - Code analysis from screenshots`,
+    useCases: ['Answer specific questions about images', 'Extract text from images', 'Identify objects, people, animals', 'Analyze documents, receipts, forms', 'Count items in photos', 'Read code from screenshots']
   },
   send_messages: {
     definition: {
@@ -145,23 +149,42 @@ const ALL_TOOLS = {
       type: 'function',
       function: {
         name: 'generate_audio',
-        description: 'Generate audio/voice files from text using AI text-to-speech. ONLY use when user specifically requests audio, voice files, or podcast content. IMPORTANT: Limit text to 140-150 words maximum (1 minute audio limit).',
+        description: 'Generate audio/voice files from text using AI text-to-speech. ONLY use when user specifically requests audio, voice files, voice responses, or podcast content. Accepts 1-5 text segments up to 100 words each. Creates separate voice messages for each segment. Voice quality can be controlled with: exaggeration (0.25-2, default 0.5), cfg_weight (0.2-1, default 0.5), temperature (0.05-1.0, default 0.8).',
         parameters: {
           type: 'object',
           properties: {
             texts: { 
               type: 'array',
               items: { type: 'string' },
-              description: 'Array of texts to convert to speech. Each text must be 140-150 words maximum for 1-minute audio. Multiple texts will be sent as separate voice messages.'
+              minItems: 1,
+              maxItems: 5,
+              description: 'Array of 1-5 text segments to convert to speech. Each segment MUST be 100 words or less. Each text will be sent as a separate voice message.'
             },
             options: { 
               type: 'object',
-              description: 'Generation options',
+              description: 'Voice generation options for fine-tuning audio quality',
               properties: {
-                seed: { type: 'number', default: 0 },
-                cfg_weight: { type: 'number', default: 0.5 },
-                temperature: { type: 'number', default: 0.8 },
-                exaggeration: { type: 'number', default: 0.5 }
+                exaggeration: { 
+                  type: 'number', 
+                  minimum: 0.25, 
+                  maximum: 2, 
+                  default: 0.5,
+                  description: 'Voice expressiveness: 0.25=monotone, 0.5=neutral, 1.0=expressive, 2.0=very dramatic'
+                },
+                cfg_weight: { 
+                  type: 'number', 
+                  minimum: 0.2, 
+                  maximum: 1, 
+                  default: 0.5,
+                  description: 'CFG/Pace weight: controls generation stability and pacing'
+                },
+                temperature: { 
+                  type: 'number', 
+                  minimum: 0.05, 
+                  maximum: 1.0, 
+                  default: 0.8,
+                  description: 'Voice randomness: lower=consistent, higher=varied intonation'
+                }
               }
             }
           },
@@ -170,11 +193,12 @@ const ALL_TOOLS = {
       }
     },
     documentation: `**🎤 GENERATE_AUDIO TOOL** - AI text-to-speech generation:
-• generate_audio({texts: ["Part 1", "Part 2"]}, {}) - Generate multiple voice messages
+• generate_audio({texts: ["Part 1", "Part 2", "Part 3"]}, {}) - Generate 1-5 voice messages  
 • WORKFLOW: Use generate_audio DIRECTLY as final response (no text message needed)
 • Creates separate voice messages for each text with delays between them
-• CRITICAL: Keep each text to 140-150 words maximum (1-minute audio limit per message)
-• Only use when user explicitly requests audio, voice files, or podcast content`,
+• Each text segment MUST be 100 words or less - split longer content into multiple segments
+• Accepts 1-5 text segments maximum per call
+• Use when user explicitly requests audio, voice files, voice responses, podcasts, or any voice content`,
     useCases: ['Create podcast-style content', 'Generate voice responses', 'Convert text to audio for accessibility', 'Create voice narrations'],
     requiresFeatureFlag: 'REPLICATE_API_TOKEN'
   }
