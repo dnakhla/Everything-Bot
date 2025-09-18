@@ -182,4 +182,20 @@ export const TelegramAPI = {
       throw error;
     }
   },
+
+  /**
+   * Get basic info about the bot
+   *
+   * @returns {Promise<object>} - Promise that resolves with bot info (id, username, etc)
+   */
+  getMe: async () => {
+    const url = `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/getMe`;
+    try {
+      const response = await axios.get(url);
+      return response.data.result;
+    } catch (error) {
+      Logger.log(`Failed to get bot info: ${error.message}`, 'error');
+      throw error;
+    }
+  },
 };

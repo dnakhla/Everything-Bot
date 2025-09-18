@@ -314,7 +314,7 @@ export async function saveUserMessage(chatId, message) {
                 ]
               }
             ],
-            max_tokens: 300
+            max_completion_tokens: 300
           });
           
           const imageDescription = response.choices[0].message.content;
@@ -418,7 +418,7 @@ export async function saveUserMessage(chatId, message) {
                           ]
                         }
                       ],
-                      max_tokens: 300
+                      max_completion_tokens: 300
                     });
                     
                     animationDescription = `GIF Analysis (fallback method): ${response.choices[0].message.content}`;
@@ -1202,7 +1202,7 @@ export async function analyzeRecentImages(chatId, query, lookbackHours = 24) {
                 ]
               }
             ],
-            max_tokens: 300
+            max_completion_tokens: 300
           });
           
           const analysis = response.choices[0].message.content;
@@ -1305,7 +1305,7 @@ export async function extractTextFromRecentImages(chatId, lookbackHours = 24) {
                 ]
               }
             ],
-            max_tokens: 300
+            max_completion_tokens: 300
           });
           
           const extractedText = response.choices[0].message.content;

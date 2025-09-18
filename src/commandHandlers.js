@@ -22,6 +22,7 @@ import { S3Manager } from '../services/s3Manager.js';
 import { getAgentTools, getAgentSystemPrompt, TOOL_USAGE_CONFIG } from './agentConfig.js';
 import { executeAgentTool, getToolExecutionDescription } from './agentExecutor.js';
 
+
 // Initialize OpenAI
 const openai = new OpenAI({
   apiKey: CONFIG.OPENAI_API_KEY,
@@ -30,6 +31,9 @@ const openai = new OpenAI({
 
 // Cancellation tracking
 const cancellationRequests = new Set();
+
+// Bot info cache
+let botInfo = null;
 
 export function requestCancellation(chatId) {
   cancellationRequests.add(chatId);
@@ -86,15 +90,13 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
     );
     
     // Note: Processing message is intentionally NOT saved to conversation history
-    Logger.log(`Sent processing message ${fetchingMessage?.message_id} (not saved to history)`)
+    Logger.log(`Sent processing message ${fetchingMessage?.message_id} (not saved to history)`);
 
     // Get recent conversation context
     const messages = await getMessagesFromLastNhours(chatId, 24);
     const conversation = JSON.stringify(messages);
 
-    // Get agent configuration
-    const tools = await getAgentTools();
-    Logger.log(`Loaded ${tools.length} tools: ${tools.map(t => t.function.name).join(', ')}`);
+    // Get tool usage limits
     const { MAX_LOOPS, MAX_TOOL_USAGE, DEFAULT_TOOL_COUNTS } = TOOL_USAGE_CONFIG;
     const toolUsageCount = { ...DEFAULT_TOOL_COUNTS };
 
@@ -110,6 +112,10 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
             
       loopCount++;
       Logger.log(`Agent loop iteration ${loopCount}`);
+
+      // Compute tools for this loop (send_messages disabled only on loop 1)
+      const tools = await getAgentTools(loopCount, MAX_LOOPS);
+      Logger.log(`Loaded ${tools.length} tools for loop ${loopCount}: ${tools.map(t => t.function.name).join(', ')}`);
 
       try {
         // Log the tools being passed to OpenAI for debugging
@@ -141,8 +147,7 @@ export async function handleRobotQuery(chatId, user_query, personality = '', req
           ],
           tools: tools,
           tool_choice: 'auto',
-          temperature: 0.7,
-          max_tokens: 3000
+          max_completion_tokens: 3000
         });
 
         const responseTime = Date.now() - startTime;
@@ -303,8 +308,7 @@ RESPOND NOW using send_messages tool with whatever helpful information you can p
             }
           ],
           tool_choice: { type: 'function', function: { name: 'send_messages' } }, // Force send_messages
-          temperature: 0.7,
-          max_tokens: 2000
+          max_completion_tokens: 2000
         });
 
         const emergencyMessage = emergencyResponse.choices[0].message;
@@ -776,6 +780,39 @@ export async function handleUnknownCommand(chatId, command) {
  * @param {string} text - The message text
  * @param {object} message - The complete message object
  */
+/**
+ * Check if a message is a reply to a bot message
+ * @param {Object} message - The message object from Telegram
+ * @returns {Promise<boolean>} - True if the message is a reply to the bot
+ */
+async function isReplyToBot(message) {
+  try {
+    // Check if this message is a reply
+    if (!message.reply_to_message) {
+      return false;
+    }
+
+    // Get bot info if not cached
+    if (!botInfo) {
+      botInfo = await TelegramAPI.getMe();
+      Logger.log(`Bot info cached: ${botInfo.username} (ID: ${botInfo.id})`);
+    }
+
+    // Check if the replied-to message is from the bot
+    const repliedToMessage = message.reply_to_message;
+    const isFromBot = repliedToMessage.from && repliedToMessage.from.id === botInfo.id;
+
+    if (isFromBot) {
+      Logger.log(`Message ${message.message_id} is a reply to bot message ${repliedToMessage.message_id}`);
+    }
+
+    return isFromBot;
+  } catch (error) {
+    Logger.log(`Error checking if message is reply to bot: ${error.message}`, 'error');
+    return false;
+  }
+}
+
 export async function handleMessage(chatId, text, message) {
   // Ignore messages from bots (including our own bot)
   if (message.from && message.from.is_bot) {
@@ -809,8 +846,8 @@ export async function handleMessage(chatId, text, message) {
     // Parse optional days parameter for detailed report
     const parts = text.split(' ');
     if (parts.length > 1 && parts[1] === 'report') {
-      const days = parts[2] ? parseInt(parts[2]) : 7;
-      await handleUsageReportCommand(chatId, days);
+      // TODO: Implement detailed usage report functionality
+      await handleUsageCommand(chatId); // Use basic usage command for now
     } else {
       await handleUsageCommand(chatId);
     }
@@ -826,6 +863,10 @@ export async function handleMessage(chatId, text, message) {
       Logger.log(`Detected persona: "${personality}", query: "${query}"`);
       await handleRobotQuery(chatId, query, personality, message.message_id);
     }
+  } else if (await isReplyToBot(message)) {
+    // Handle replies to bot messages (even without "robot" prefix)
+    Logger.log(`Message is a reply to bot, processing: "${text}"`);
+    await handleRobotQuery(chatId, text, '', message.message_id);
   } else {
     // Save regular user messages for context
     await saveUserMessage(chatId, message);

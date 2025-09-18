@@ -86,7 +86,8 @@ function trimMessageObject(message) {
     },
     date: message.date,
     text: message.text,
-    caption: message.caption
+    caption: message.caption,
+    reply_to_message: message.reply_to_message
   };
 
   // Preserve file attachments

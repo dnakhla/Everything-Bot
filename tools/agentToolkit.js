@@ -5,8 +5,15 @@
  * of the underlying specialized tools. Agents get fewer, more powerful tools.
  */
 
-import * as SearchEngines from './searchEngines.js';
-import * as RedditSearch from './redditSearch.js';
+import {
+  performWebSearch,
+  performNewsSearch,
+  performImageSearch,
+  performVideoSearch,
+  performPlacesSearch,
+  performRedditSearch,
+  searchAlternativeSites
+} from '../services/searchService.js';
 import * as MemorySearch from './memorySearch.js';
 import * as MathCalculation from './mathCalculation.js';
 import * as ContentAnalysis from './contentAnalysis.js';
@@ -42,29 +49,26 @@ export const search = createToolWrapper(
     
     switch (topic.toLowerCase()) {
       case 'news':
-        return await SearchEngines.performNewsSearch(query);
-      
+        return await performNewsSearch(query);
+
       case 'images':
-        return await SearchEngines.performImageSearch(query);
-      
+        return await performImageSearch(query);
+
       case 'videos':
-        return await SearchEngines.performVideoSearch(query);
-      
+        return await performVideoSearch(query);
+
       case 'places':
-        return await SearchEngines.performPlacesSearch(query);
-      
+        return await performPlacesSearch(query);
+
       case 'reddit':
-        return await RedditSearch.searchReddit(query, subreddit);
-      
-      case 'reddit-posts':
-        return await RedditSearch.getRedditPosts(subreddit, timeframe);
-      
+        return await performRedditSearch(query);
+
       case 'alternative':
-        return await SearchEngines.searchUnpopularSites(query);
-      
+        return await searchAlternativeSites(query);
+
       case 'web':
       default:
-        return await MessageService.performGoogleSearch(query);
+        return await performWebSearch(query);
     }
   },
   {

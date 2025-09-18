@@ -41,8 +41,7 @@ export async function summarizeContent(content, maxPoints = 5, instruction = nul
           content: userPrompt
         }
       ],
-      temperature: 0.3,
-      max_tokens: 400
+      max_completion_tokens: 400
     });
     
     const responseTime = Date.now() - startTime;

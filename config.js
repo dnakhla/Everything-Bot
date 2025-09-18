@@ -15,7 +15,7 @@ export const CONFIG = {
   GPT_MODEL: process.env.GPT_MODEL || 'gpt-4.1',
   MESSAGE_LIMIT: 1000,
   DEFAULT_SENSITIVITY: 75,
-  SERPER_API_KEY: process.env.SERPER_API_KEY,
+  SERPAPI_KEY: process.env.SERPAPI_KEY,
   BRAVE_API_KEY: process.env.BRAVE_API_KEY,
   REPLICATE_API_TOKEN: process.env.REPLICATE_API_TOKEN,
   ADMIN_CHAT_ID: process.env.ADMIN_CHAT_ID || '1716676964', // Default to your chat ID

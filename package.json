@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "deploy": "bash deploy.sh --deploy --function-name FactCheckerBot-LambdaFunction --region us-east-1",
-    "set-env": "bash deploy.sh --set-env --function-name FactCheckerBot-LambdaFunction --region us-east-1 --telegram-token \"$TELEGRAM_BOT_TOKEN\" --openai-key \"$OPENAI_API_KEY\" --s3-bucket \"$S3_BUCKET_NAME\" --serper-key \"$SERPER_API_KEY\" --brave-key \"$BRAVE_API_KEY\" --replicate-token \"$REPLICATE_API_TOKEN\"",
-    "logs": "aws logs filter-log-events --log-group-name /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1 --start-time $(date -d '5 minutes ago' +%s)000 --query 'events[*].message' --output text | grep '\\[' | tail -20 && echo '--- MONITORING ---' && while true; do aws logs filter-log-events --log-group-name /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1 --start-time $(date -d '30 seconds ago' +%s)000 --query 'events[*].message' --output text | grep '\\[' | tail -5; sleep 5; done",
+    "set-env": "bash deploy.sh --set-env --function-name FactCheckerBot-LambdaFunction --region us-east-1 --telegram-token \"$TELEGRAM_BOT_TOKEN\" --openai-key \"$OPENAI_API_KEY\" --s3-bucket \"$S3_BUCKET_NAME\" --serpapi-key \"$SERPAPI_KEY\" --brave-key \"$BRAVE_API_KEY\" --replicate-token \"$REPLICATE_API_TOKEN\"",
+    "logs": "aws logs filter-log-events --log-group-name /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1 --start-time $(node -e 'process.stdout.write(String(Date.now()-2*60*1000))') --query 'events[*].message' --output text | sed 's/^[0-9T:\\.-]*Z[[:space:]]*[a-f0-9-]*[[:space:]]*[A-Z]*[[:space:]]*//' | sed 's/\\[ANALYTICS\\] message_received:/📨 Message:/' | sed 's/\\[ANALYTICS\\] tool_usage:/🔧 Tool:/' | sed 's/\\[SEND_MESSAGES\\]/📤 Response/' | sed 's/\\[TOOLS\\] Tool result:/⚡ Result:/' | sed 's/\\[TOOLS\\]/⚡ Tools/' | sed 's/\\[ERROR\\]/❌ Error/' | sed 's/Received message/📨 New message/' | sed 's/Creating voice memo/🎤 Voice/' | sed 's/Audio generation/🔊 Audio/' | grep -E '📨|🔧|📤|⚡|❌|🎤|🔊|ERROR|Failed|Success|Loop [0-9]|reply|Tool result' | sed 's/\\(⚡ Result:.*\\)\\(.\\{100\\}\\).*/\\1\\2.../' | tail -15 && echo '--- LIVE ---' && while true; do aws logs filter-log-events --log-group-name /aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1 --start-time $(node -e 'process.stdout.write(String(Date.now()-15*1000))') --query 'events[*].message' --output text | sed 's/^[0-9T:\\.-]*Z[[:space:]]*[a-f0-9-]*[[:space:]]*[A-Z]*[[:space:]]*//' | sed 's/\\[ANALYTICS\\] message_received:/📨 Message:/' | sed 's/\\[ANALYTICS\\] tool_usage:/🔧 Tool:/' | sed 's/\\[SEND_MESSAGES\\]/📤 Response/' | sed 's/\\[TOOLS\\] Tool result:/⚡ Result:/' | sed 's/\\[TOOLS\\]/⚡ Tools/' | sed 's/\\[ERROR\\]/❌ Error/' | sed 's/Received message/📨 New message/' | sed 's/Creating voice memo/🎤 Voice/' | sed 's/Audio generation/🔊 Audio/' | grep -E '📨|🔧|📤|⚡|❌|🎤|🔊|ERROR|Failed|Success|Loop [0-9]|reply|Tool result' | sed 's/\\(⚡ Result:.*\\)\\(.\\{100\\}\\).*/\\1\\2.../' | tail -3; sleep 3; done",
     "logs:follow": "aws logs start-live-tail --log-group-identifiers arn:aws:logs:us-east-1:734788133199:log-group:/aws/lambda/FactCheckerBot-LambdaFunction --region us-east-1",
     "test": "node test-local.js",
     "test:custom": "node test-local.js",
@@ -44,7 +44,8 @@
     "moment": "^2.29.4",
     "node-telegram-bot-api": "^0.61.0",
     "openai": "^4.24.1",
-    "puppeteer-core": "^21.6.1"
+    "puppeteer-core": "^21.6.1",
+    "replicate": "^1.1.0"
   },
   "devDependencies": {
     "chalk": "^5.4.1",

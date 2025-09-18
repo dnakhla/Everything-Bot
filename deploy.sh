@@ -22,13 +22,13 @@ DO_CREATE=false
 
 # --- Helper Functions ---
 usage() {
-    echo "Usage: $0 [--function-name <n>] [--region <region>] [--telegram-token <token>] [--openai-key <key>] [--s3-bucket <bucket>] [--serper-key <key>] [--brave-key <key>] [--replicate-token <token>] [--deploy] [--set-env] [--create] [--role <role>] [--account-id <id>]"
+    echo "Usage: $0 [--function-name <n>] [--region <region>] [--telegram-token <token>] [--openai-key <key>] [--s3-bucket <bucket>] [--serpapi-key <key>] [--brave-key <key>] [--replicate-token <token>] [--deploy] [--set-env] [--create] [--role <role>] [--account-id <id>]"
     echo "  --function-name  : AWS Lambda function name (required for --deploy and --set-env)"
     echo "  --region         : AWS Region (optional, default: $DEFAULT_REGION)"
     echo "  --telegram-token : Telegram Bot Token (required for --set-env)"
     echo "  --openai-key     : OpenAI API Key (required for --set-env)"
     echo "  --s3-bucket      : S3 Bucket Name (required for --set-env)"
-    echo "  --serper-key     : Google Serper API Key (for web search functionality)"
+    echo "  --serpapi-key    : SerpAPI Key (for web search functionality)"
     echo "  --brave-key      : Brave Search API Key (for web search functionality)"
     echo "  --replicate-token: Replicate API Token (for audio generation functionality)"
     echo "  --deploy         : Flag to deploy the zip file to AWS Lambda"
@@ -62,8 +62,8 @@ while [[ $# -gt 0 ]]; do
             S3_BUCKET="$2"
             shift 2
             ;;
-        --serper-key)
-            SERPER_API_KEY="$2"
+        --serpapi-key)
+            SERPAPI_KEY="$2"
             shift 2
             ;;
         --brave-key)
@@ -308,7 +308,7 @@ if [ "$DO_SET_ENV" = true ]; then
     fi
 
     echo -e "Setting environment variables for Lambda function: ${GREEN}$LAMBDA_FUNCTION_NAME${NC}..."
-    ENV_VARIABLES="Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPER_API_KEY=${SERPER_API_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-},REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-},GPT_MODEL=${GPT_MODEL:-gpt-4.1}}"
+    ENV_VARIABLES="Variables={TELEGRAM_BOT_TOKEN=$TELEGRAM_TOKEN,OPENAI_API_KEY=$OPENAI_KEY,S3_BUCKET_NAME=$S3_BUCKET,SERPAPI_KEY=${SERPAPI_KEY:-},BRAVE_API_KEY=${BRAVE_API_KEY:-},REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN:-},GPT_MODEL=${GPT_MODEL:-gpt-4.1}}"
 
     aws lambda update-function-configuration \
         --function-name "$LAMBDA_FUNCTION_NAME" \

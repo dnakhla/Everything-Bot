@@ -39,29 +39,37 @@ export const searchTool = {
   },
 
   // Tool documentation for system prompt
-  documentation: `**🔍 SEARCH TOOL** - Universal search with ADVANCED QUERY TECHNIQUES:
-ALWAYS use sophisticated search strategies for maximum effectiveness:
+  documentation: `**🔍 SEARCH TOOL** - Advanced real-time intelligence gathering with multi-source synthesis:
+PROFESSIONAL-GRADE search capabilities with sophisticated query construction and source diversification:
 
-🎯 **QUOTED PHRASES** - Use "exact phrases" for precise results:
-• search('"machine learning" safety concerns', 'news') - Exact phrase matching
-• search('"telegram bot api" documentation', 'web') - Specific technical terms
+🎯 **PRECISION QUERY ENGINEERING** - Master-level search syntax for optimal results:
+• search('"exact technical term" AND context -spam -ads', 'web') - Boolean logic with noise filtering
+• search('site:github.com "telegram bot" language:JavaScript', 'web') - Source-specific technical searches
+• search('"breaking news" within:2h location:ukraine', 'news') - Time and location precision
+• search('"research paper" filetype:pdf machine learning 2024', 'web') - Document type filtering
 
-🔀 **BOOLEAN OPERATORS** - Combine terms strategically:
-• search('"AI regulation" AND policy OR legislation', 'news') - Multiple related terms
-• search('cybersecurity AND privacy -marketing -ads', 'web') - Include/exclude terms
+🔀 **ADVANCED BOOLEAN OPERATIONS** - Complex logical constructions for comprehensive coverage:
+• search('("artificial intelligence" OR "machine learning") AND ethics -marketing', 'news') - Grouped terms with exclusions
+• search('"supply chain" AND (disruption OR shortage) AND 2024', 'news') - Multiple condition matching
+• search('cybersecurity AND (vulnerability OR breach) -advertisement', 'web') - Industry-specific filtering
 
-📅 **TIME-FOCUSED SEARCHES** - Add temporal context for recent information:
-• search('"climate summit" 2024 outcomes', 'news') - Recent specific events
-• search('"AI breakthrough" December 2024', 'web') - Latest developments
+📅 **TEMPORAL INTELLIGENCE** - Time-aware searching for current and historical context:
+• search('"election results" after:2024-11-01 before:2024-12-01', 'news') - Precise date ranges
+• search('"market crash" within:24h real-time', 'news') - Ultra-recent developments
+• search('"historical analysis" world war timeline', 'web') - Historical context research
 
-🌐 **SEARCH TYPES**:
-• search(query, "web") - General web search (default)
-• search(query, "news") - Breaking news, current events, recent developments
-• search(query, "reddit") - Public discussions, opinions, community insights
-• search(query, "alternative") - Independent journalism, diverse perspectives
-• search(query, "images") - Visual examples, screenshots, diagrams
-• search(query, "videos") - Tutorials, explanations, demonstrations
-• search(query, "places") - Local businesses, physical locations`,
+🌐 **MULTI-SOURCE INTELLIGENCE MATRIX**:
+• search(query, "news") - BREAKING: Real-time news feeds, press releases, official statements, wire services
+• search(query, "web") - COMPREHENSIVE: Documentation, academic papers, official sites, technical resources
+• search(query, "reddit") - GRASSROOTS: Community insights, user experiences, insider perspectives, discussions
+• search(query, "alternative") - DIVERSE: Independent journalism, investigative reports, alternative viewpoints
+• search(query, "images") - VISUAL: Infographics, technical diagrams, evidence photos, charts, screenshots
+• search(query, "videos") - DYNAMIC: Live coverage, tutorials, explanations, demonstrations, testimonials
+• search(query, "places") - LOCATION: Business listings, geographical data, local information, maps
+
+⚡ **INTELLIGENT AGGREGATION** - Cross-references multiple sources for comprehensive, verified information
+🛡️ **SOURCE CREDIBILITY** - Prioritizes authoritative sources while maintaining perspective diversity
+🔄 **REAL-TIME ACCESS** - Bypasses AI training cutoffs for current events and latest developments`,
 
   // Persona-specific examples
   personaExamples: {

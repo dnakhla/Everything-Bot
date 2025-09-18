@@ -125,8 +125,7 @@ export const analyzeImage = createToolWrapper(
               ]
             }
           ],
-          temperature: 0.3,
-          max_tokens: 1000
+          max_completion_tokens: 1000
         }),
         'image_analysis',
         chatId
@@ -334,8 +333,7 @@ export const compareImages = createToolWrapper(
             ]
           }
         ],
-        temperature: 0.3,
-        max_tokens: 1000
+        max_completion_tokens: 1000
       });
       
       const comparison = response.choices[0].message.content;

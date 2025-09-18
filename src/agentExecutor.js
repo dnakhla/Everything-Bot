@@ -19,6 +19,8 @@ import {
   generate_audio
 } from '../tools/agentToolkit.js';
 import { analyzeImage, analyzeImageContent } from '../tools/imageAnalysis.js';
+import { messageSearchToolkit } from './tools/messageSearchTool.js';
+import { createVoiceMemo } from '../tools/voiceMemo.js';
 import { TOOL_USAGE_CONFIG } from './agentConfig.js';
 
 /**
@@ -56,12 +58,12 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
             result = await executeImagesTool(functionArgs, chatId);
             break;
             
-          case 'calculate':
-            result = await executeCalculateTool(functionArgs);
+          case 'run_code':
+            result = await executeRunCodeTool(functionArgs);
             break;
             
           case 'analyze':
-            result = await executeAnalyzeTool(functionArgs);
+            result = await executeUnifiedAnalyzeTool(functionArgs, chatId);
             break;
             
           case 'fetch_url':
@@ -72,9 +74,6 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
             result = await executeBrowserTool(functionArgs, chatId);
             break;
             
-          case 'analyze_image':
-            result = await executeAnalyzeImageTool(functionArgs, chatId);
-            break;
             
           case 'generate_audio':
             result = await executeGenerateAudioTool(functionArgs, chatId);
@@ -83,7 +82,17 @@ export async function executeAgentTool(functionName, functionArgs, chatId) {
           case 'send_messages':
             result = await executeSendMessagesTool(functionArgs, chatId);
             break;
-            
+
+          case 'search_messages':
+          case 'get_recent_messages':
+          case 'get_user_messages':
+            result = await executeSearchMessagesTool(functionArgs, chatId);
+            break;
+
+          case 'create_voice_memo':
+            result = await executeCreateVoiceMemoTool(functionArgs, chatId);
+            break;
+
           default:
             throw new Error(`Unknown tool function: ${functionName}`);
         }
@@ -148,25 +157,87 @@ async function executeImagesTool(args, chatId) {
 /**
  * Execute calculate tool
  */
-async function executeCalculateTool(args) {
-  const { expression } = args;
-  
-  Logger.log(`Calculate: "${expression}"`);
-  
-  const result = await calculate(expression);
+/**
+ * Execute run_code tool with safe code execution
+ */
+async function executeRunCodeTool(args) {
+  const { code, language = 'javascript', context = {} } = args;
+
+  Logger.log(`Run Code: "${code.substring(0, 100)}${code.length > 100 ? '...' : ''}" (${language})`);
+
+  // Import and use the code runner
+  const { runCode } = await import('../tools/codeRunner.js');
+
+  const result = await runCode(code, context, { language });
   return result;
 }
 
 /**
  * Execute analyze tool with content and options
  */
-async function executeAnalyzeTool(args) {
-  const { content, action = 'summarize', options = {} } = args;
-  
-  Logger.log(`Analyze: action "${action}" with options: ${JSON.stringify(options)}`);
-  
-  const result = await analyze(content, action, options);
-  return result;
+/**
+ * Execute unified analyze tool for all content types
+ */
+async function executeUnifiedAnalyzeTool(args, chatId) {
+  const {
+    content,
+    contentType = 'auto',
+    instruction = 'analyze this content thoroughly',
+    options = {}
+  } = args;
+
+  Logger.log(`Unified Analyze: contentType "${contentType}", instruction "${instruction}", options: ${JSON.stringify(options)}`);
+
+  // Auto-detect content type if not specified
+  let detectedType = contentType;
+  if (contentType === 'auto') {
+    if (content.startsWith('http://') || content.startsWith('https://')) {
+      detectedType = content.match(/\.(jpg|jpeg|png|gif|bmp|webp)(\?|$)/i) ? 'image' : 'url';
+    } else if (content.startsWith('data:image/')) {
+      detectedType = 'image';
+    } else if (content.includes('file_id')) {
+      detectedType = 'voice'; // Assume voice for file_id (could be enhanced)
+    } else {
+      detectedType = 'text';
+    }
+  }
+
+  Logger.log(`Content type detected/specified: ${detectedType}`);
+
+  try {
+    switch (detectedType) {
+      case 'image':
+        // Use existing image analysis functionality
+        const { analyzeImage } = await import('../tools/imageAnalysis.js');
+        return await analyzeImage(content, instruction, chatId);
+
+      case 'voice':
+      case 'audio':
+        // Handle voice/audio transcription and analysis
+        const { analyzeVoiceMessage } = await import('../tools/voiceAnalysis.js');
+        return await analyzeVoiceMessage(content, instruction, options);
+
+      case 'document':
+        // Handle document analysis
+        const { analyzeDocument } = await import('../tools/documentAnalysis.js');
+        return await analyzeDocument(content, instruction, options);
+
+      case 'url':
+        // Handle URL content analysis
+        const { fetch_url } = await import('../tools/agentToolkit.js');
+        return await fetch_url(content, instruction);
+
+      case 'text':
+      default:
+        // Handle text analysis using existing functionality
+        const { analyze } = await import('../tools/agentToolkit.js');
+        const action = options.action || 'analyze';
+        return await analyze(content, action, options);
+    }
+  } catch (error) {
+    Logger.log(`Unified analyze error for type ${detectedType}: ${error.message}`, 'error');
+    return `❌ Analysis failed for ${detectedType} content: ${error.message}`;
+  }
 }
 
 /**
@@ -196,19 +267,6 @@ async function executeBrowserTool(args, chatId) {
 /**
  * Execute analyze_image tool with proper parameter mapping
  */
-async function executeAnalyzeImageTool(args, chatId) {
-  const { imageData, instruction = 'analyze this image', contentType = 'general' } = args;
-  
-  Logger.log(`Analyze Image: instruction "${instruction}", contentType "${contentType}"`);
-  
-  if (contentType === 'general') {
-    const result = await analyzeImage(imageData, instruction, chatId);
-    return result;
-  } else {
-    const result = await analyzeImageContent(imageData, contentType, chatId);
-    return result;
-  }
-}
 
 /**
  * Execute generate_audio tool with proper parameter mapping
@@ -226,35 +284,141 @@ async function executeGenerateAudioTool(args, chatId) {
 }
 
 /**
- * Execute send_messages tool - this sends messages directly with staggered delays
+ * Execute send_messages tool - handles both text and audio responses
  */
 async function executeSendMessagesTool(args, chatId) {
-  const { messages } = args;
-  
-  Logger.log(`[SEND_MESSAGES] Starting: ${messages.length} messages, chatId: ${chatId}`);
+  const { messages, medium = { type: 'text' } } = args;
+  const mediumType = medium.type || 'text';
+  const voiceOptions = {
+    voiceId: medium.voiceId || 'auto',
+    emotion: medium.emotion || 'auto',
+    speed: medium.speed || 1.0
+  };
+
+  Logger.log(`[SEND_MESSAGES] Starting: ${messages.length} messages, medium: ${JSON.stringify(medium)}, chatId: ${chatId}`);
   Analytics.trackMessageSent(chatId, messages.length);
-  
+
   // Import here to avoid circular dependency
   const telegramModule = await import('../services/telegramAPI.js');
   const TelegramAPI = telegramModule.TelegramAPI;
-  
+
   // Import saveBotMessage to save messages to S3
   const messageServiceModule = await import('../services/messageService.js');
   const { saveBotMessage } = messageServiceModule;
-  
-  // Use messages directly - no separate links handling
-  const finalMessages = [...messages];
-  
-  // Send messages with staggered delays
+
+  // Handle audio medium
+  if (mediumType === 'audio') {
+    Logger.log(`[SEND_MESSAGES] Audio mode selected - creating voice message`);
+
+    // Validate content is suitable for audio
+    const combinedText = messages.join(' ');
+    if (combinedText.length > 1200) {
+      Logger.log(`[SEND_MESSAGES] Audio content too long (${combinedText.length} chars), falling back to text`);
+      // Fall back to text if too long
+      const fallbackMessage = `📢 Audio content was too long (${combinedText.length} characters). Here's the text version:\n\n${combinedText}`;
+      const sentMessage = await TelegramAPI.sendMessage(chatId, fallbackMessage, {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: false
+      });
+
+      if (sentMessage) {
+        await saveBotMessage(chatId, sentMessage);
+        Logger.log(`Saved fallback text message ${sentMessage.message_id} to S3`);
+      }
+
+      return {
+        __MESSAGES_SENT__: true,
+        count: 1,
+        timestamp: Date.now()
+      };
+    }
+
+    // Create voice memo using existing voice memo functionality
+    try {
+      const { createVoiceMemo } = await import('../tools/voiceMemo.js');
+
+      Logger.log(`[SEND_MESSAGES] Creating voice memo: "${combinedText.substring(0, 50)}..." (${voiceOptions.voiceId})`);
+      const result = await createVoiceMemo(
+        combinedText,
+        voiceOptions.voiceId || 'auto',
+        voiceOptions.emotion || 'auto',
+        voiceOptions.speed || 1.0,
+        '', // title
+        chatId
+      );
+
+      // Send the audio to Telegram
+      if (result && result.success && result.audioBuffer) {
+        const sentMessage = await TelegramAPI.sendVoice(chatId, result.audioBuffer, {
+          caption: result.metadata?.title || 'Voice message'
+        });
+
+        if (sentMessage) {
+          await saveBotMessage(chatId, sentMessage);
+          Logger.log(`Saved voice message ${sentMessage.message_id} to S3`);
+        }
+
+        return {
+          __MESSAGES_SENT__: true,
+          count: 1,
+          timestamp: Date.now(),
+          audioGenerated: true
+        };
+      } else {
+        throw new Error('Voice memo creation failed or returned invalid result');
+      }
+
+    } catch (error) {
+      Logger.log(`[SEND_MESSAGES] Audio generation failed: ${error.message}, falling back to text`, 'warn');
+      // Fall back to text on error
+      const fallbackMessage = `🎤 Voice generation failed. Here's the text version:\n\n${combinedText}`;
+      const sentMessage = await TelegramAPI.sendMessage(chatId, fallbackMessage, {
+        parse_mode: 'Markdown',
+        disable_web_page_preview: false
+      });
+
+      if (sentMessage) {
+        await saveBotMessage(chatId, sentMessage);
+        Logger.log(`Saved fallback text message ${sentMessage.message_id} to S3`);
+      }
+
+      return {
+        __MESSAGES_SENT__: true,
+        count: 1,
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  // Default text message handling with automatic splitting
+  let finalMessages = [];
+
+  // Split long messages and flatten arrays
+  for (const message of messages) {
+    if (typeof message === 'string') {
+      // Split messages that are too long (Telegram limit is 4096 chars)
+      if (message.length > 3000) {
+        const chunks = splitMessage(message, 3000);
+        finalMessages.push(...chunks);
+      } else {
+        finalMessages.push(message);
+      }
+    } else {
+      finalMessages.push(String(message));
+    }
+  }
+
+  // Remove message limit - no truncation
+
   try {
     for (let i = 0; i < finalMessages.length; i++) {
       const message = finalMessages[i];
-      
+
       const sentMessage = await TelegramAPI.sendMessage(chatId, message, {
         parse_mode: 'Markdown',
         disable_web_page_preview: false
       });
-      
+
       // Save each sent message to S3
       if (sentMessage) {
         await saveBotMessage(chatId, sentMessage);
@@ -262,34 +426,80 @@ async function executeSendMessagesTool(args, chatId) {
       } else {
         Logger.log(`Warning: Failed to send message ${i + 1}, could not save to S3`, 'warn');
       }
-      
+
       // Add quick delay between messages for natural flow
       if (i < finalMessages.length - 1) {
         const nextMessage = finalMessages[i + 1];
-        
+
         // Much faster delays - optimized for quick responses
         const baseDelay = 800; // Base 800ms delay
         const lengthBonus = Math.min(nextMessage.length * 10, 1200); // 10ms per char, max 1.2s bonus
         const quickDelay = baseDelay + lengthBonus; // 800ms to 2s total
-        
+
         Logger.log(`Quick delay: ${quickDelay}ms for next message (${nextMessage.length} chars)`);
         await new Promise(resolve => setTimeout(resolve, quickDelay));
       }
     }
-    
-    Logger.log(`[SEND_MESSAGES] Successfully sent ${finalMessages.length} messages with delays and saved to S3`);
-    
+
+    Logger.log(`[SEND_MESSAGES] Successfully sent ${finalMessages.length} text messages with delays and saved to S3`);
+
     // Return special marker to indicate messages were sent and loop should end
     return {
       __MESSAGES_SENT__: true,
       count: finalMessages.length,
       timestamp: Date.now()
     };
-    
+
   } catch (error) {
     Logger.log(`Error sending messages: ${error.message}`, 'error');
     throw error;
   }
+}
+
+/**
+ * Execute unified search messages tool with parameter mapping
+ */
+async function executeSearchMessagesTool(args, chatId) {
+  Logger.log(`Unified message search with args: ${JSON.stringify(args)}`);
+
+  // Map different tool formats to unified search_messages parameters
+  let searchArgs = { ...args, chat_id: chatId };
+
+  // Handle get_recent_messages mapping (count -> limit)
+  if (args.count !== undefined) {
+    searchArgs.limit = args.count;
+    searchArgs.query = searchArgs.query || '';
+    delete searchArgs.count;
+  }
+
+  // Handle get_user_messages mapping (username -> user_filter)
+  if (args.username !== undefined) {
+    searchArgs.user_filter = args.username;
+    searchArgs.query = searchArgs.query || '';
+    delete searchArgs.username;
+  }
+
+  const result = await messageSearchToolkit.search_messages(searchArgs);
+  return result;
+}
+
+
+/**
+ * Execute create voice memo tool
+ */
+async function executeCreateVoiceMemoTool(args, chatId) {
+  Logger.log(`Creating voice memo with args: ${JSON.stringify(args)}`);
+
+  const result = await createVoiceMemo(
+    args.text,
+    args.voiceId || 'auto',
+    args.emotion || 'auto',
+    args.speed || 'auto',
+    args.title || '',
+    chatId
+  );
+
+  return result;
 }
 
 /**
@@ -356,56 +566,23 @@ export function getToolExecutionDescription(functionName, functionArgs) {
           return `🎨 Processing images (${imgAction})`;
       }
       
-    case 'calculate':
-      return `🧮 Calculating: ${functionArgs.expression}`;
+    case 'run_code':
+      const { code } = functionArgs;
+      const codePreview = code.length > 50 ? code.substring(0, 50) + '...' : code;
+      return `⚡ Running code: ${codePreview}`;
       
     case 'analyze':
-      const { action: analyzeAction = 'summarize' } = functionArgs;
-      return analyzeAction === 'summarize' ? 
-        '📊 Summarizing content' : 
-        '🔬 Analyzing data';
-        
-    case 'browser':
-      const { url: browserUrl, action: browserAction = 'scrape', options: browserOptions = {} } = functionArgs;
-      const { instruction = '', waitFor = 3000 } = browserOptions;
-      
-      switch (browserAction) {
-        case 'scrape':
-          return `🌐 Opening browser to scrape: ${browserUrl}`;
-        case 'screenshot':
-          return `📸 Taking ${browserOptions.fullPageScreenshot ? 'full page' : 'viewport'} screenshot of: ${browserUrl}`;
-        case 'interact':
-          if (browserOptions.clickElement && browserOptions.fillForm) {
-            return `🖱️ Filling form and clicking "${browserOptions.clickElement}" on: ${browserUrl}`;
-          } else if (browserOptions.clickElement) {
-            return `🖱️ Clicking "${browserOptions.clickElement}" on: ${browserUrl}`;
-          } else if (browserOptions.fillForm) {
-            return `⌨️ Filling form fields on: ${browserUrl}`;
-          }
-          return `🤖 Interacting with page: ${browserUrl}`;
-        case 'wait-and-scrape':
-          return `⏳ Loading page (${waitFor}ms wait) and scraping dynamic content from: ${browserUrl}`;
-        case 'spa-scrape':
-          return `⚡ Loading Single Page App (${waitFor}ms) and extracting content from: ${browserUrl}`;
-        case 'links':
-          return `🔗 Extracting relevant links from: ${browserUrl}`;
-        case 'find-clickables':
-          return `🔍 Scanning for clickable elements related to "${instruction}" on: ${browserUrl}`;
-        case 'smart-navigate':
-          return `🧠 Smart navigation: Auto-clicking through ${browserUrl} to find "${instruction}"`;
-        default:
-          return `🌐 Browser automation (${browserAction}) on: ${browserUrl}`;
-      }
+      const { contentType = 'auto', instruction = 'analyze content' } = functionArgs;
+      const typeEmoji = {
+        text: '📝', image: '🖼️', voice: '🎤', audio: '🔊',
+        document: '📄', video: '🎬', url: '🌐', auto: '🔍'
+      };
+      return `${typeEmoji[contentType] || '🔍'} ${instruction}`;
         
     case 'fetch_url':
       const { url } = functionArgs;
       return `📄 Reading content from: ${url}`;
         
-    case 'analyze_image':
-      const { instruction: imgInstruction = 'analyze image', contentType = 'general' } = functionArgs;
-      return contentType === 'general' ? 
-        `👁️ Looking at image: "${imgInstruction}"` :
-        `🔍 Analyzing ${contentType}: "${imgInstruction}"`;
         
     case 'generate_audio':
       const { texts: audioTexts, text: audioText } = functionArgs;
@@ -417,7 +594,34 @@ export function getToolExecutionDescription(functionName, functionArgs) {
         
     case 'send_messages':
       return `💬 Preparing ${functionArgs.messages?.length || 1} response messages`;
-        
+
+    case 'search_messages':
+      const { query: searchQuery, user_filter, days_back = 7 } = functionArgs;
+      if (searchQuery && user_filter) {
+        return `🔍 Searching for "${searchQuery}" in ${user_filter}'s messages (${days_back} days)`;
+      } else if (searchQuery) {
+        return `🔍 Searching chat history for "${searchQuery}" (${days_back} days back)`;
+      } else if (user_filter) {
+        return `👤 Finding recent messages from ${user_filter}`;
+      }
+      return `📚 Searching conversation history`;
+
+    case 'get_recent_messages':
+      const { count = 20 } = functionArgs;
+      return `📝 Getting last ${count} messages for context`;
+
+    case 'get_user_messages':
+      const { username, days_back: userDays = 30 } = functionArgs;
+      return `👤 Finding messages from ${username} (last ${userDays} days)`;
+
+    case 'create_voice_memo':
+      const { text: voiceText = '', voiceId = 'auto', title: voiceTitle } = functionArgs;
+      const shortText = voiceText.substring(0, 50);
+      const voiceChar = voiceId === 'auto' ? 'smart voice' : voiceId;
+      return voiceTitle ?
+        `🎤 Creating voice memo "${voiceTitle}" (${voiceChar})` :
+        `🎤 Creating voice memo: "${shortText}..." (${voiceChar})`;
+
     default:
       return `⚙️ Executing ${functionName}`;
   }

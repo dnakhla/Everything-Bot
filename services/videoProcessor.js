@@ -200,7 +200,7 @@ export async function analyzeVideoFrames(frames, metadata, openai) {
               ]
             }
           ],
-          max_tokens: 120
+          max_completion_tokens: 120
         });
         
         const frameDescription = frameResponse.choices[0].message.content;
